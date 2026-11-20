@@ -1,0 +1,268 @@
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Header } from "@/components/Header";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Wallet as WalletIcon, TrendingUp, TrendingDown, Download, ArrowLeft, Tv, Heart, Crown, Coins, ArrowRightLeft } from "lucide-react";
+import { WatchAdDialog } from "@/components/premium/WatchAdDialog";
+import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import { COINS_PER_TAKA, CONVERSION_FEE_RATE, coinsToTaka, coinsToTakaAfterFee, COINS_PER_AD, ADS_PER_TAKA } from "@/lib/currency";
+
+const Wallet = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [showAdDialog, setShowAdDialog] = useState(false);
+
+  const { data: wallet, isLoading: walletLoading } = useQuery({
+    queryKey: ["wallet", user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from("wallets")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const { data: transactions, isLoading: transactionsLoading } = useQuery({
+    queryKey: ["transactions", user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("*")
+        .eq("user_id", user.id)
+        .limit(20);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  if (!user) {
+    return (
+      <>
+        <Header />
+        <div className="min-h-screen bg-background pt-20 px-6 pb-12">
+          <div className="max-w-4xl mx-auto text-center py-12">
+            <h2 className="text-2xl font-bold mb-4">Please login to view your wallet</h2>
+            <Button onClick={() => navigate("/auth")}>Login</Button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Header />
+      <div className="min-h-screen bg-background pt-20 px-6 pb-12">
+        <div className="max-w-6xl mx-auto">
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/")}
+            className="mb-6"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Home
+          </Button>
+
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-neon-teal via-neon-violet to-neon-magenta bg-clip-text text-transparent mb-2">
+              My Wallet
+            </h1>
+            <p className="text-muted-foreground">Manage your coins, earnings, and transactions</p>
+          </div>
+
+          {/* Currency Info */}
+          <Card className="bg-gradient-to-r from-sky-500/10 to-cyan-500/10 border-sky-500/30">
+            <CardContent className="py-4">
+              <div className="flex flex-wrap items-center justify-center gap-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <ArrowRightLeft className="h-4 w-4 text-sky-400" />
+                  <span><strong>{COINS_PER_TAKA} coins = ৳1</strong></span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Tv className="h-4 w-4 text-blue-400" />
+                  <span>Watch 1 ad = <strong>{COINS_PER_AD} coins</strong></span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span>Watch {ADS_PER_TAKA} ads = <strong>৳1</strong></span>
+                </div>
+                <div className="flex items-center gap-2 text-amber-400">
+                  <span>{CONVERSION_FEE_RATE * 100}% conversion fee on withdrawal</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Wallet Overview Cards */}
+          <div className="grid md:grid-cols-4 gap-4 mb-8">
+            <Card className="bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 border-yellow-500/30">
+              <CardHeader>
+                <CardDescription>Coin Balance</CardDescription>
+                <CardTitle className="text-3xl flex items-center gap-2">
+                  <Coins className="h-6 w-6 text-yellow-400" />
+                  {walletLoading ? "..." : (wallet?.balance || 0).toLocaleString()}
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  ≈ ৳{walletLoading ? "..." : coinsToTakaAfterFee(wallet?.balance || 0).toFixed(2)} after fee
+                </p>
+              </CardHeader>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/30">
+              <CardHeader>
+                <CardDescription>Total Earned (Coins)</CardDescription>
+                <CardTitle className="text-3xl flex items-center gap-2">
+                  <TrendingUp className="h-6 w-6 text-green-500" />
+                  {walletLoading ? "..." : (wallet?.total_earned || 0).toLocaleString()}
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  ≈ ৳{walletLoading ? "..." : coinsToTaka(wallet?.total_earned || 0).toFixed(2)}
+                </p>
+              </CardHeader>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-red-500/10 to-red-500/5 border-red-500/30">
+              <CardHeader>
+                <CardDescription>Total Spent (Coins)</CardDescription>
+                <CardTitle className="text-3xl flex items-center gap-2">
+                  <TrendingDown className="h-6 w-6 text-red-500" />
+                  {walletLoading ? "..." : (wallet?.total_spent || 0).toLocaleString()}
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  ≈ ৳{walletLoading ? "..." : coinsToTaka(wallet?.total_spent || 0).toFixed(2)}
+                </p>
+              </CardHeader>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-neon-violet/10 to-neon-violet/5 border-neon-violet/30">
+              <CardHeader>
+                <CardDescription>Total Withdrawn (৳)</CardDescription>
+                <CardTitle className="text-3xl flex items-center gap-2">
+                  <Download className="h-6 w-6 text-neon-violet" />
+                  ৳{walletLoading ? "..." : wallet?.total_withdrawn || 0}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+            <Button 
+              onClick={() => setShowAdDialog(true)}
+              className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:opacity-90"
+            >
+              <Tv className="mr-2 h-4 w-4" />
+              Watch Ad
+            </Button>
+            <Button 
+              onClick={() => navigate("/app/donate")}
+              className="bg-gradient-to-r from-pink-500 to-red-500 hover:opacity-90"
+            >
+              <Heart className="mr-2 h-4 w-4" />
+              Donate
+            </Button>
+            <Button 
+              onClick={() => navigate("/app/premium")}
+              className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:opacity-90"
+            >
+              <Crown className="mr-2 h-4 w-4" />
+              Premium
+            </Button>
+            <Button 
+              onClick={() => navigate("/app/payment")}
+              className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:opacity-90"
+            >
+              <WalletIcon className="mr-2 h-4 w-4" />
+              Top Up
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={() => navigate("/app/payment")}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Withdraw
+            </Button>
+          </div>
+
+          <WatchAdDialog 
+            open={showAdDialog} 
+            onOpenChange={setShowAdDialog}
+          />
+
+          {/* Transaction History */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Transaction History</CardTitle>
+              <CardDescription>Your recent coin transactions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {transactionsLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="animate-pulse flex items-center justify-between p-4 border rounded">
+                      <div className="h-4 bg-muted rounded w-1/3" />
+                      <div className="h-4 bg-muted rounded w-1/4" />
+                    </div>
+                  ))}
+                </div>
+              ) : transactions && transactions.length > 0 ? (
+                <div className="space-y-2">
+                  {transactions.map((transaction) => (
+                    <div
+                      key={transaction.id}
+                      className="flex items-center justify-between p-4 border rounded hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex-1">
+                        <p className="font-medium">{transaction.description}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(transaction.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <Badge
+                          variant={
+                            transaction.type === "earn" || transaction.type === "commission"
+                              ? "default"
+                              : "secondary"
+                          }
+                        >
+                          {transaction.type}
+                        </Badge>
+                        <p
+                          className={`text-lg font-bold ${
+                            transaction.type === "earn" || transaction.type === "commission"
+                              ? "text-green-500"
+                              : "text-red-500"
+                          }`}
+                        >
+                          {transaction.type === "earn" || transaction.type === "commission" ? "+" : "-"}
+                          {transaction.amount.toLocaleString()} coins
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No transactions yet
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </>
+  );
+};
+
+export default Wallet;

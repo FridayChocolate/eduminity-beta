@@ -1,0 +1,513 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Light Theme - Clean Academic */
+    --background: 0 0% 100%;
+    --foreground: 240 10% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 15%;
+
+    --primary: 197 71% 73%;
+    --primary-foreground: 240 10% 15%;
+
+    --secondary: 270 50% 85%;
+    --secondary-foreground: 240 10% 15%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 240 7% 35%;
+
+    --accent: 330 60% 88%;
+    --accent-foreground: 240 10% 15%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 197 71% 73%;
+
+    --radius: 0.75rem;
+
+    /* Light Theme Neon Accents */
+    --neon-teal: 187 100% 42%;
+    --neon-violet: 258 90% 66%;
+    --neon-blue: 217 91% 60%;
+    --neon-magenta: 330 81% 60%;
+
+    /* Student Mode Colors (Light) - Cyan/Blue Academic */
+    --student-primary: 195 100% 50%;
+    --student-secondary: 210 100% 55%;
+    --student-accent: 185 90% 45%;
+    --student-bg: 200 30% 98%;
+    --student-card: 200 25% 99%;
+    --student-border: 200 20% 88%;
+    --student-hover: 200 30% 95%;
+    --student-sidebar: 200 25% 96%;
+    --student-muted: 200 15% 50%;
+    --student-glow: 195 100% 50%;
+
+    /* Creator Mode Colors (Light) - Purple/Pink/Orange Gradient */
+    --creator-primary: 280 85% 55%;
+    --creator-secondary: 320 90% 55%;
+    --creator-tertiary: 35 95% 55%;
+    --creator-cyan: 185 90% 45%;
+    --creator-magenta: 320 85% 58%;
+    --creator-violet: 265 80% 60%;
+    --creator-green: 160 84% 39%;
+    --creator-bg: 280 20% 97%;
+    --creator-border: 280 25% 85%;
+    --creator-sidebar: 280 20% 95%;
+    --creator-hover: 280 20% 92%;
+    --creator-card: 280 20% 98%;
+    --creator-glow: 280 90% 60%;
+
+    /* Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(197 71% 73% / 0.3), hsl(270 50% 85% / 0.3));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(210 40% 98%));
+    --gradient-student: linear-gradient(135deg, hsl(195 100% 50% / 0.15), hsl(210 100% 55% / 0.15));
+    --gradient-creator: linear-gradient(135deg, hsl(280 85% 55% / 0.15), hsl(320 90% 55% / 0.15), hsl(35 95% 55% / 0.15));
+  }
+
+  .dark {
+    /* Dark Theme - Neon Cyberpunk */
+    --background: 240 10% 4%;
+    --foreground: 0 0% 98%;
+
+    --card: 240 8% 8%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 240 8% 8%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 187 100% 42%;
+    --primary-foreground: 240 10% 4%;
+
+    --secondary: 258 90% 66%;
+    --secondary-foreground: 240 10% 4%;
+
+    --muted: 240 6% 12%;
+    --muted-foreground: 240 5% 65%;
+
+    --accent: 330 81% 60%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 6% 18%;
+    --input: 240 6% 18%;
+    --ring: 187 100% 42%;
+
+    /* Dark Theme Neon Colors */
+    --neon-teal: 187 100% 42%;
+    --neon-violet: 258 90% 66%;
+    --neon-blue: 217 91% 60%;
+    --neon-magenta: 330 81% 60%;
+
+    /* Student Mode Colors (Dark) - Cyan/Blue Neon Learning */
+    --student-primary: 195 100% 55%;
+    --student-secondary: 210 100% 60%;
+    --student-accent: 185 95% 50%;
+    --student-bg: 210 25% 5%;
+    --student-card: 210 22% 8%;
+    --student-border: 210 20% 18%;
+    --student-hover: 210 20% 12%;
+    --student-sidebar: 210 25% 6%;
+    --student-muted: 210 15% 55%;
+    --student-glow: 195 100% 55%;
+
+    /* Creator Mode Colors (Dark) - Purple/Pink/Orange Neon Studio */
+    --creator-primary: 280 90% 65%;
+    --creator-secondary: 320 95% 62%;
+    --creator-tertiary: 35 100% 60%;
+    --creator-cyan: 185 95% 50%;
+    --creator-magenta: 320 90% 62%;
+    --creator-violet: 265 90% 70%;
+    --creator-green: 160 90% 45%;
+    --creator-bg: 275 25% 5%;
+    --creator-border: 280 40% 20%;
+    --creator-sidebar: 280 30% 6%;
+    --creator-hover: 280 25% 12%;
+    --creator-card: 280 22% 8%;
+    --creator-glow: 280 95% 65%;
+
+    /* Dark Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(187 100% 42% / 0.2), hsl(258 90% 66% / 0.2));
+    --gradient-card: linear-gradient(145deg, hsl(240 8% 8%), hsl(240 6% 12%));
+    --gradient-student: linear-gradient(135deg, hsl(195 100% 55% / 0.1), hsl(210 100% 60% / 0.1));
+    --gradient-creator: linear-gradient(135deg, hsl(280 90% 65% / 0.1), hsl(320 95% 62% / 0.1), hsl(35 100% 60% / 0.1));
+  }
+
+  /* Student Mode Overrides */
+  [data-mode="student"] {
+    --primary: var(--student-primary);
+    --secondary: var(--student-secondary);
+    --ring: var(--student-primary);
+    --accent: var(--student-accent);
+  }
+
+  [data-mode="student"].dark {
+    --background: var(--student-bg);
+    --card: var(--student-card);
+    --muted: 210 20% 14%;
+    --border: var(--student-border);
+  }
+
+  [data-mode="student"]:not(.dark) {
+    --background: var(--student-bg);
+    --card: var(--student-card);
+    --border: var(--student-border);
+  }
+
+  /* Contributor/Creator Mode Overrides */
+  [data-mode="contributor"] {
+    --primary: var(--creator-primary);
+    --secondary: var(--creator-secondary);
+    --accent: var(--creator-tertiary);
+    --ring: var(--creator-primary);
+  }
+
+  [data-mode="contributor"].dark {
+    --background: var(--creator-bg);
+    --card: var(--creator-card);
+    --muted: 280 20% 13%;
+    --border: var(--creator-border);
+  }
+
+  [data-mode="contributor"]:not(.dark) {
+    --background: var(--creator-bg);
+    --card: var(--creator-card);
+    --border: var(--creator-border);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    font-family: inherit;
+  }
+
+  html {
+    font-family: var(--font-family, 'Inter', sans-serif);
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: inherit;
+    transition: background-color 0.5s ease, color 0.3s ease;
+  }
+
+  h1, h2, h3, h4, h5, h6, p, span, a, button, input, textarea, select, label, div {
+    font-family: inherit;
+  }
+}
+
+@layer components {
+  /* Student Mode Styles */
+  [data-mode="student"] .mode-card {
+    @apply bg-card/90 backdrop-blur-sm border-student-border;
+    background: var(--gradient-student);
+  }
+
+  [data-mode="student"] .mode-card:hover {
+    @apply border-primary/40;
+    box-shadow: 0 0 20px hsl(var(--student-glow) / 0.15);
+  }
+
+  [data-mode="student"] .mode-glow {
+    box-shadow: 0 0 25px hsl(var(--student-glow) / 0.2), 0 0 50px hsl(var(--student-secondary) / 0.1);
+  }
+
+  [data-mode="student"] .mode-text-gradient {
+    background: linear-gradient(135deg, hsl(var(--student-primary)), hsl(var(--student-secondary)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  [data-mode="student"] .mode-hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px hsl(var(--student-glow) / 0.2);
+  }
+
+  /* Creator Mode Styles */
+  [data-mode="contributor"] .mode-card {
+    @apply bg-card/90 backdrop-blur-sm;
+    border: 1px solid hsl(var(--creator-border) / 0.5);
+    background: var(--gradient-creator);
+  }
+
+  [data-mode="contributor"] .mode-card:hover {
+    border-color: hsl(var(--creator-primary) / 0.5);
+    box-shadow: 0 0 25px hsl(var(--creator-glow) / 0.2);
+  }
+
+  [data-mode="contributor"] .mode-glow {
+    box-shadow: 0 0 30px hsl(var(--creator-primary) / 0.25), 
+                0 0 60px hsl(var(--creator-secondary) / 0.15),
+                0 0 90px hsl(var(--creator-tertiary) / 0.1);
+  }
+
+  [data-mode="contributor"] .mode-text-gradient {
+    background: linear-gradient(135deg, hsl(var(--creator-primary)), hsl(var(--creator-secondary)), hsl(var(--creator-tertiary)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  [data-mode="contributor"] .mode-hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px hsl(var(--creator-glow) / 0.25);
+  }
+
+  /* Creator Sidebar Styles */
+  .creator-sidebar {
+    background: hsl(var(--creator-sidebar));
+    border-right: 1px solid hsl(var(--creator-border));
+  }
+
+  /* Creator legacy styles for compatibility */
+  .creator-card {
+    @apply bg-card/90 backdrop-blur-sm;
+    border: 1px solid hsl(var(--creator-border) / 0.5);
+    background: linear-gradient(145deg, hsl(var(--creator-card)), hsl(var(--creator-bg)));
+  }
+
+  .creator-card:hover {
+    border-color: hsl(var(--creator-primary) / 0.4);
+  }
+
+  .creator-glow {
+    box-shadow: 0 0 30px hsl(var(--creator-primary) / 0.2), 0 0 60px hsl(var(--creator-cyan) / 0.1);
+  }
+
+  .creator-text-gradient {
+    background: linear-gradient(135deg, hsl(var(--creator-primary)), hsl(var(--creator-cyan)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Mode Transition Overlay */
+  .mode-transition-overlay {
+    @apply fixed inset-0 z-[200] pointer-events-none;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary) / 0.95),
+      hsl(var(--secondary) / 0.95),
+      hsl(var(--accent) / 0.95)
+    );
+    animation: mode-fade 0.8s ease-in-out forwards;
+  }
+
+  .mode-transition-bg {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary) / 0.95),
+      hsl(var(--secondary) / 0.95),
+      hsl(var(--accent) / 0.95)
+    );
+  }
+
+  /* Mode Indicator Pill */
+  .mode-indicator-student {
+    @apply px-3 py-1 rounded-full text-xs font-semibold;
+    background: linear-gradient(135deg, hsl(var(--student-primary) / 0.2), hsl(var(--student-secondary) / 0.2));
+    border: 1px solid hsl(var(--student-primary) / 0.3);
+    color: hsl(var(--student-primary));
+  }
+
+  .mode-indicator-contributor {
+    @apply px-3 py-1 rounded-full text-xs font-semibold;
+    background: linear-gradient(135deg, hsl(var(--creator-primary) / 0.2), hsl(var(--creator-secondary) / 0.2));
+    border: 1px solid hsl(var(--creator-primary) / 0.3);
+    color: hsl(var(--creator-primary));
+  }
+
+  /* Creator Mode Toast */
+  .creator-mode-toast {
+    @apply fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full;
+    background: linear-gradient(135deg, hsl(var(--creator-primary)), hsl(var(--creator-secondary)));
+    animation: slide-in-fade 0.5s ease-out, fade-out 0.3s ease-in 2.5s forwards;
+  }
+
+  /* Student Mode Toast */
+  .student-mode-toast {
+    @apply fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full;
+    background: linear-gradient(135deg, hsl(var(--student-primary)), hsl(var(--student-secondary)));
+    animation: slide-in-fade 0.5s ease-out, fade-out 0.3s ease-in 2.5s forwards;
+  }
+
+  /* Mode-specific button styles */
+  [data-mode="student"] .mode-button-primary {
+    @apply bg-primary text-primary-foreground;
+    box-shadow: 0 0 15px hsl(var(--student-glow) / 0.3);
+  }
+
+  [data-mode="student"] .mode-button-primary:hover {
+    box-shadow: 0 0 25px hsl(var(--student-glow) / 0.5);
+  }
+
+  [data-mode="contributor"] .mode-button-primary {
+    @apply text-primary-foreground;
+    background: linear-gradient(135deg, hsl(var(--creator-primary)), hsl(var(--creator-secondary)));
+    box-shadow: 0 0 20px hsl(var(--creator-glow) / 0.3);
+  }
+
+  [data-mode="contributor"] .mode-button-primary:hover {
+    box-shadow: 0 0 30px hsl(var(--creator-glow) / 0.5);
+  }
+}
+
+@keyframes slide-in-fade {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
+}
+
+@keyframes mode-fade {
+  0% {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+@keyframes pulse-glow-student {
+  0%, 100% {
+    box-shadow: 0 0 20px hsl(var(--student-glow) / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 35px hsl(var(--student-glow) / 0.5);
+  }
+}
+
+@keyframes pulse-glow-creator {
+  0%, 100% {
+    box-shadow: 0 0 25px hsl(var(--creator-glow) / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px hsl(var(--creator-glow) / 0.5);
+  }
+}
+
+@layer utilities {
+  /* Smooth mode transitions */
+  .transition-mode {
+    transition: background-color 0.5s ease, border-color 0.5s ease, color 0.3s ease, box-shadow 0.4s ease;
+  }
+
+  .transition-mode-fast {
+    transition: all 0.3s ease;
+  }
+
+  /* Mode-specific animations */
+  [data-mode="student"] .animate-mode-glow {
+    animation: pulse-glow-student 2s ease-in-out infinite;
+  }
+
+  [data-mode="contributor"] .animate-mode-glow {
+    animation: pulse-glow-creator 2s ease-in-out infinite;
+  }
+
+  /* Premium profile effects */
+  .premium-glow {
+    position: relative;
+  }
+
+  .premium-glow::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, hsl(330 90% 60%), hsl(280 90% 60%), hsl(260 90% 70%));
+    z-index: -1;
+    filter: blur(10px);
+    opacity: 0.6;
+    animation: premium-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes premium-pulse {
+    0%, 100% { opacity: 0.4; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.02); }
+  }
+
+  .verified-glow {
+    box-shadow: 0 0 15px hsl(195 100% 50% / 0.4), 0 0 30px hsl(195 100% 50% / 0.2);
+  }
+
+  /* Scrollbar hide utility */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Profile card styles */
+  .profile-card-premium {
+    background: linear-gradient(135deg, 
+      hsl(330 90% 60% / 0.08), 
+      hsl(280 90% 60% / 0.08), 
+      hsl(260 90% 70% / 0.08)
+    );
+    border: 1px solid hsl(280 60% 60% / 0.3);
+  }
+
+  .profile-card-verified {
+    border: 1px solid hsl(195 100% 50% / 0.3);
+  }
+
+  /* Animated shimmer for loading */
+  .shimmer-premium {
+    background: linear-gradient(
+      90deg,
+      hsl(280 20% 15%) 0%,
+      hsl(280 30% 25%) 50%,
+      hsl(280 20% 15%) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+}

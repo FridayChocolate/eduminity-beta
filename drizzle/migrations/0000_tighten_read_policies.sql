@@ -1,0 +1,16 @@
+DROP POLICY IF EXISTS "Anyone can view study materials" ON public.study_materials;
+CREATE POLICY "Signed-in users can view study materials" ON public.study_materials FOR SELECT TO authenticated USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "Anyone can view categories" ON public.material_categories;
+CREATE POLICY "Signed-in users can view categories" ON public.material_categories FOR SELECT TO authenticated USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "Anyone can view discussions" ON public.discussions;
+CREATE POLICY "Signed-in users can view discussions" ON public.discussions FOR SELECT TO authenticated USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "Anyone can view replies" ON public.discussion_replies;
+CREATE POLICY "Signed-in users can view replies" ON public.discussion_replies FOR SELECT TO authenticated USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "Anyone can view discussion boards" ON public.discussion_boards;
+CREATE POLICY "Signed-in users can view discussion boards" ON public.discussion_boards FOR SELECT TO authenticated USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "Anyone can view badges" ON public.badges;
+CREATE POLICY "Signed-in users can view badges" ON public.badges FOR SELECT TO authenticated USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "Anyone can view premium features" ON public.premium_features;
+CREATE POLICY "Signed-in users can view premium features" ON public.premium_features FOR SELECT TO authenticated USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "Avatar images are publicly accessible" ON storage.objects;
+CREATE POLICY "Users can view their own avatar files" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'avatars' AND (auth.uid())::text = (storage.foldername(name))[1]);
