@@ -9,7 +9,6 @@ interface PageTransitionProps {
 export const PageTransition = ({ children }: PageTransitionProps) => {
   const { pathname } = useLocation();
 
-  // Automatically reset scroll to the top on every route change
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [pathname]);
@@ -17,9 +16,9 @@ export const PageTransition = ({ children }: PageTransitionProps) => {
   return (
     <motion.div
       key={pathname}
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, ease: "easeOut" }}
+      initial={{ opacity: 0, y: 20, scale: 0.985 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       className="w-full min-w-0"
     >
       {children}
