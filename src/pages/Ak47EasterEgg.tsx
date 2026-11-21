@@ -1,9 +1,15 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Sparkles, ShieldAlert } from "lucide-react";
+import { fireConfetti } from "@/lib/confetti";
 
 export default function Ak47EasterEgg() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    fireConfetti();
+  }, []);
 
   const sections = [
     {

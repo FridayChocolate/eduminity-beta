@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, FileText, User, X, BookOpen, GraduationCap } from "lucide-react";
+import { Search, FileText, X, BookOpen, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,37 +11,70 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
 
-type SearchFilter = "all" | "materials" | "creators";
-
-interface SearchResult {
+interface MaterialResult {
   id: string;
-  type: "material" | "creator";
   title: string;
-  subtitle: string;
-  avatar?: string;
-  badge?: string;
+  category: string | null;
+  price: number;
+  page_count: number | null;
+  class_level: string | null;
 }
-
-// Mock search results - replace with actual API call
-const mockResults: SearchResult[] = [
-  { id: "1", type: "material", title: "Organic Chemistry Notes", subtitle: "By Sarah Ahmed • 4.9★", badge: "Best Seller" },
-  { id: "2", type: "material", title: "Calculus II Complete Guide", subtitle: "By John Doe • 4.7★" },
-  { id: "3", type: "creator", title: "Sarah Ahmed", subtitle: "University of Dhaka • 4.9★ • 234 sales", badge: "Verified" },
-  { id: "4", type: "creator", title: "John Doe", subtitle: "BUET • 4.5★ • 89 sales" },
-  { id: "5", type: "material", title: "Physics Mechanics", subtitle: "By Alex Khan • 4.8★", badge: "New" },
-  { id: "6", type: "creator", title: "Alex Khan", subtitle: "NSU • 4.8★ • 156 sales", badge: "Rising Star" },
-];
 
 export const SearchDialog = () => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<SearchFilter>("all");
+  const [results, setResults] = useState<MaterialResult[]>([]);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const isAk47EasterEgg = query.toLowerCase().replace(/[^a-z0-9]/g, "") === "ak47";
+
+  // Enable Ctrl+K / Cmd+K shortcut
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setOpen((prev) => !prev);
+      }
+    };
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
+  }, []);
+
+  // Live debounced search against Supabase materials table
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (!trimmed || isAk47EasterEgg) {
+      setResults([]);
+      setLoading(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await (supabase as any)
+          .from("materials")
+          .select("id, title, category, price, page_count, class_level")
+          .or(`title.ilike.%${trimmed}%,category.ilike.%${trimmed}%,description.ilike.%${trimmed}%`)
+          .order("created_at", { ascending: false })
+          .limit(8);
+
+        if (!error && data) {
+          setResults(data);
+        }
+      } catch (err) {
+        console.error("Search error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [query, isAk47EasterEgg]);
 
   const triggerEasterEgg = () => {
     setOpen(false);
@@ -49,30 +82,11 @@ export const SearchDialog = () => {
     navigate("/secret/ak47");
   };
 
-  const filteredResults = mockResults.filter((result) => {
-    const matchesQuery = result.title.toLowerCase().includes(query.toLowerCase()) ||
-      result.subtitle.toLowerCase().includes(query.toLowerCase());
-    const matchesFilter = filter === "all" || 
-      (filter === "materials" && result.type === "material") ||
-      (filter === "creators" && result.type === "creator");
-    return matchesQuery && matchesFilter;
-  });
-
-  const handleResultClick = (result: SearchResult) => {
-    if (result.type === "creator") {
-      navigate(`/creator/${result.title.toLowerCase().replace(/\s+/g, "_")}`);
-    } else {
-      navigate("/app/materials");
-    }
+  const handleResultClick = (materialId: string) => {
+    navigate(`/app/materials/${materialId}`);
     setOpen(false);
     setQuery("");
   };
-
-  const filterButtons: { value: SearchFilter; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-    { value: "all", label: "All", icon: Search },
-    { value: "materials", label: "Materials", icon: FileText },
-    { value: "creators", label: "Creators", icon: User },
-  ];
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -91,24 +105,24 @@ export const SearchDialog = () => {
           </Button>
         </motion.div>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[550px] p-0 gap-0 overflow-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-top-[2%] data-[state=open]:slide-in-from-top-[2%] duration-200">
-        <DialogHeader className="p-4 pb-2 border-b border-border">
+      <DialogContent className="sm:max-w-[550px] p-0 gap-0 overflow-hidden duration-200">
+        <DialogHeader className="p-4 pb-3 border-b border-border">
           <DialogTitle className="sr-only">Search</DialogTitle>
-          <motion.div 
-            className="relative"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2, delay: 0.1 }}
-          >
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search notes, materials, or creators..."
+              placeholder="Search study notes, subjects, or categories..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && isAk47EasterEgg) {
-                  e.preventDefault();
-                  triggerEasterEgg();
+                if (e.key === "Enter") {
+                  if (isAk47EasterEgg) {
+                    e.preventDefault();
+                    triggerEasterEgg();
+                  } else if (results.length > 0) {
+                    e.preventDefault();
+                    handleResultClick(results[0].id);
+                  }
                 }
               }}
               className="pl-10 pr-10 bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-primary h-11"
@@ -134,40 +148,11 @@ export const SearchDialog = () => {
                 </motion.div>
               )}
             </AnimatePresence>
-          </motion.div>
+          </div>
         </DialogHeader>
 
-        {/* Filter Buttons */}
-        <motion.div 
-          className="flex gap-2 p-3 border-b border-border bg-muted/30"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.2, delay: 0.15 }}
-        >
-          {filterButtons.map((btn) => (
-            <Button
-              key={btn.value}
-              variant={filter === btn.value ? "default" : "outline"}
-              size="sm"
-              className={cn(
-                "gap-1.5 text-xs transition-all duration-200",
-                filter === btn.value && "bg-primary text-primary-foreground"
-              )}
-              onClick={() => setFilter(btn.value)}
-            >
-              <btn.icon className="h-3.5 w-3.5" />
-              {btn.label}
-            </Button>
-          ))}
-        </motion.div>
-
         {/* Results */}
-        <motion.div 
-          className="max-h-[400px] overflow-y-auto p-2"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.2, delay: 0.2 }}
-        >
+        <div className="max-h-[400px] overflow-y-auto p-2">
           {isAk47EasterEgg ? (
             <motion.button
               initial={{ opacity: 0, scale: 0.95 }}
@@ -193,90 +178,71 @@ export const SearchDialog = () => {
                 </p>
               </div>
             </motion.button>
-          ) : query.length === 0 ? (
+          ) : query.trim().length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               <Search className="h-12 w-12 mx-auto mb-3 opacity-50" />
               <p className="text-sm">Start typing to search</p>
-              <p className="text-xs mt-1">Find notes, study materials, or creators</p>
+              <p className="text-xs mt-1">Find notes, subjects, or study guides</p>
             </div>
-          ) : filteredResults.length === 0 ? (
+          ) : loading ? (
+            <div className="p-8 flex flex-col items-center justify-center text-muted-foreground">
+              <Loader2 className="h-7 w-7 animate-spin text-primary mb-2" />
+              <p className="text-xs">Searching Study Hub...</p>
+            </div>
+          ) : results.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p className="text-sm">No results found</p>
-              <p className="text-xs mt-1">Try a different search term or filter</p>
+              <p className="text-sm">No study materials found for &ldquo;{query}&rdquo;</p>
+              <p className="text-xs mt-1">Try a different subject or keyword</p>
             </div>
           ) : (
             <div className="space-y-1">
-              <AnimatePresence mode="popLayout">
-                {filteredResults.map((result, index) => (
-                  <motion.button
-                    key={result.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2, delay: index * 0.03 }}
-                    onClick={() => handleResultClick(result)}
-                    className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted/80 transition-colors text-left group"
-                    whileHover={{ x: 4 }}
-                  >
-                    <div className={cn(
-                      "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
-                      result.type === "creator" 
-                        ? "bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20" 
-                        : "bg-gradient-to-br from-cyan-500/20 to-blue-500/20"
-                    )}>
-                      {result.type === "creator" ? (
-                        <GraduationCap className="h-5 w-5 text-violet-400" />
-                      ) : (
-                        <BookOpen className="h-5 w-5 text-cyan-400" />
-                      )}
+              {results.map((item) => (
+                <motion.button
+                  key={item.id}
+                  onClick={() => handleResultClick(item.id)}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted/80 transition-colors text-left group"
+                  whileHover={{ x: 4 }}
+                >
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center flex-shrink-0">
+                    <BookOpen className="h-5 w-5 text-cyan-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                        {item.title}
+                      </span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                          {result.title}
-                        </span>
-                        {result.badge && (
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
-                            {result.badge}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground truncate">{result.subtitle}</p>
-                    </div>
-                    <Badge variant="outline" className="text-[10px] capitalize flex-shrink-0">
-                      {result.type}
-                    </Badge>
-                  </motion.button>
-                ))}
-              </AnimatePresence>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {[
+                        item.category,
+                        item.class_level,
+                        item.page_count ? `${item.page_count} pages` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" • ")}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="text-xs font-semibold text-teal-400 border-teal-500/30 flex-shrink-0">
+                    {item.price === 0 ? "Free" : `৳${item.price}`}
+                  </Badge>
+                </motion.button>
+              ))}
             </div>
           )}
-        </motion.div>
+        </div>
 
         {/* Footer */}
-        <motion.div 
-          className="p-3 border-t border-border bg-muted/30 flex items-center justify-between text-xs text-muted-foreground"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.2, delay: 0.25 }}
-        >
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 rounded bg-muted border text-[10px]">↑</kbd>
-              <kbd className="px-1.5 py-0.5 rounded bg-muted border text-[10px]">↓</kbd>
-              Navigate
-            </span>
-            <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 rounded bg-muted border text-[10px]">↵</kbd>
-              Select
-            </span>
-          </div>
+        <div className="p-3 border-t border-border bg-muted/30 flex items-center justify-between text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 rounded bg-muted border text-[10px]">↵</kbd>
+            Open top result
+          </span>
           <span className="flex items-center gap-1">
             <kbd className="px-1.5 py-0.5 rounded bg-muted border text-[10px]">esc</kbd>
             Close
           </span>
-        </motion.div>
+        </div>
       </DialogContent>
     </Dialog>
   );

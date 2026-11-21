@@ -6,6 +6,8 @@ import { ModeSwitcher } from "@/components/ModeSwitcher";
 import { useAuth } from "@/hooks/useAuth";
 import { useMode } from "@/contexts/ModeContext";
 import { supabase } from "@/integrations/supabase/client";
+import { PageTransition } from "@/components/PageTransition";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import {
   Sparkles,
   Menu,
@@ -264,7 +266,8 @@ export const ContributorLayout = ({ children }: ContributorLayoutProps) => {
         </div>
 
         <div className="p-3 sm:p-6 md:p-8 max-w-7xl mx-auto w-full min-w-0">
-          {children}
+          <Breadcrumbs />
+          <PageTransition>{children}</PageTransition>
         </div>
       </main>
     </div>

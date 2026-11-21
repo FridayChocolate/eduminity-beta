@@ -1,6 +1,8 @@
 import { ReactNode } from "react";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
+import { PageTransition } from "@/components/PageTransition";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -15,7 +17,8 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
           <Sidebar />
         </div>
         <main className="flex-1 min-w-0 w-full p-3 md:p-6 overflow-x-hidden">
-          {children}
+          <Breadcrumbs />
+          <PageTransition>{children}</PageTransition>
         </main>
       </div>
     </div>
