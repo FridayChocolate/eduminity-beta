@@ -26,7 +26,7 @@ import {
 const ADMIN_EMAIL = "business.eduminity@gmail.com";
 
 export default function Profile() {
-  const { user, userRole, canAccessCreator, canAccessStudent } = useAuth();
+  const { user, userRole, canAccessCreator, canAccessStudent, activeMode } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -143,7 +143,7 @@ export default function Profile() {
   };
 
   const handleBack = () => {
-    if (userRole === "contributor") {
+    if (activeMode === "contributor") {
       navigate("/app/creator-studio");
     } else {
       navigate("/app/student-dashboard");
@@ -164,7 +164,7 @@ export default function Profile() {
         <div className="flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={handleBack} className="gap-2">
             <ArrowLeft className="h-4 w-4" />
-            {userRole === "contributor" ? "Back to Creator Studio" : "Back to Dashboard"}
+            {activeMode === "contributor" ? "Back to Creator Studio" : "Back to Dashboard"}
           </Button>
 
           {isAdmin && (

@@ -14,7 +14,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { ModeToggle } from "@/components/ModeToggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const navItems = [
@@ -59,7 +58,7 @@ export const StudentSidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut, canSwitchModes } = useAuth();
+  const { signOut, isContributor, activeMode, toggleMode } = useAuth();
 
   const NavItem = ({ item, isActive }: { item: (typeof navItems)[0]; isActive: boolean }) => {
     const content = (
@@ -153,10 +152,17 @@ export const StudentSidebar = () => {
         </Tooltip>
       </div>
 
-      {/* Mode Toggle - shown for accounts with Creator access */}
-      {!collapsed && canSwitchModes && (
+      {!collapsed && isContributor && (
         <div className="px-3 py-3 border-b border-border">
-          <ModeToggle />
+          <Button
+            variant="outline"
+            className="w-full justify-start text-xs"
+            onClick={toggleMode}
+          >
+            {activeMode === "contributor"
+              ? "Switch to Student View"
+              : "Switch to Contributor Studio"}
+          </Button>
         </div>
       )}
 

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMode } from "@/contexts/ModeContext";
 import { useAuth } from "@/hooks/useAuth";
@@ -41,24 +40,22 @@ const modeConfig = {
 };
 
 export const ModeToggle = () => {
-  const { mode, setMode, isTransitioning } = useMode();
-  const { user, canSwitchModes } = useAuth();
-  const navigate = useNavigate();
+  const { mode, isTransitioning } = useMode();
+  const { user, isContributor, activeMode, toggleMode } = useAuth();
   const [isHovered, setIsHovered] = useState(false);
 
-  // Strict portal rule: only users with "both" roles can toggle modes
-  if (!user || !canSwitchModes) return null;
+  if (!user || !isContributor) return null;
 
-  const currentConfig = modeConfig[mode];
+  const displayMode = mode === "contributor" || mode === "student" ? mode : activeMode;
+  const currentConfig = modeConfig[displayMode];
   const CurrentIcon = currentConfig.icon;
 
-  const otherMode = mode === "student" ? "contributor" : "student";
+  const otherMode = displayMode === "student" ? "contributor" : "student";
   const otherConfig = modeConfig[otherMode];
 
   const handleToggle = () => {
     if (isTransitioning) return;
-    setMode(otherMode);
-    navigate(otherMode === "contributor" ? "/app/creator-studio" : "/app/student-dashboard");
+    toggleMode();
   };
 
   return (
@@ -73,7 +70,7 @@ export const ModeToggle = () => {
             "relative h-10 px-4 rounded-full overflow-hidden transition-all duration-300",
             "border-2 backdrop-blur-sm",
             "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-            mode === "student"
+            displayMode === "student"
               ? "border-cyan-500/50 bg-cyan-500/10 hover:bg-cyan-500/20 focus-visible:ring-cyan-400"
               : "border-purple-500/50 bg-purple-500/10 hover:bg-purple-500/20 focus-visible:ring-purple-400",
             isTransitioning && "pointer-events-none opacity-70"
@@ -102,7 +99,7 @@ export const ModeToggle = () => {
                   currentConfig.gradient
                 )}
                 animate={{
-                  x: mode === "student" ? 0 : 24,
+                  x: displayMode === "student" ? 0 : 24,
                 }}
                 transition={{
                   type: "spring",
@@ -118,13 +115,13 @@ export const ModeToggle = () => {
                 <BookOpen
                   className={cn(
                     "h-3 w-3 transition-opacity duration-300",
-                    mode === "student" ? "opacity-0" : "opacity-40"
+                    displayMode === "student" ? "opacity-0" : "opacity-40"
                   )}
                 />
                 <Palette
                   className={cn(
                     "h-3 w-3 transition-opacity duration-300",
-                    mode === "contributor" ? "opacity-0" : "opacity-40"
+                    displayMode === "contributor" ? "opacity-0" : "opacity-40"
                   )}
                 />
               </div>
@@ -133,7 +130,7 @@ export const ModeToggle = () => {
             {/* Label */}
             <AnimatePresence mode="wait">
               <motion.span
-                key={mode}
+                key={displayMode}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}

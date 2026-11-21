@@ -11,7 +11,7 @@ import { ModeProvider } from "@/contexts/ModeContext";
 import { ModeTransition } from "@/components/ModeTransition";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { useAuth } from "@/hooks/useAuth";
+import { AuthNavigatorBridge, useAuth } from "@/hooks/useAuth";
 
 // Public pages
 import HomePage from "./pages/HomePage";
@@ -87,6 +87,7 @@ const App = () => (
           <Sonner />
           <ModeTransition />
           <BrowserRouter>
+            <AuthNavigatorBridge />
             <ScrollToTop />
             <Routes>
               {/* Public Marketing Pages */}

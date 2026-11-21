@@ -7,6 +7,7 @@ import {
   Sparkles,
   LogOut,
   ShieldCheck,
+  ArrowLeftRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
@@ -26,7 +27,7 @@ import { SearchDialog } from "@/components/SearchDialog";
 const ADMIN_EMAIL = "business.neurovane@gmail.com";
 
 export const Header = () => {
-  const { user, canAccessCreator, canSwitchModes } = useAuth();
+  const { user, canAccessCreator, canSwitchModes, isContributor, activeMode, toggleMode } = useAuth();
   const { mode, setMode } = useMode();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -238,6 +239,21 @@ export const Header = () => {
                       </p>
                     </div>
 
+                    {isContributor && (
+                      <button
+                        onClick={() => {
+                          setProfileMenuOpen(false);
+                          toggleMode();
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-white/10 text-left transition-colors text-teal-300"
+                      >
+                        <ArrowLeftRight className="h-4 w-4 text-teal-400" />
+                        {activeMode === "contributor"
+                          ? "Switch to Student View"
+                          : "Switch to Contributor Studio"}
+                      </button>
+                    )}
+
                     <button
                       onClick={() => navigateTo("/app/profile")}
                       className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-white/10 text-left transition-colors"
@@ -373,6 +389,19 @@ export const Header = () => {
                 {user && (
                   <>
                     <div className="border-t border-border my-2" />
+                    {isContributor && (
+                      <button
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          toggleMode();
+                        }}
+                        className="text-left text-base font-medium p-2 rounded-md hover:bg-muted text-primary"
+                      >
+                        {activeMode === "contributor"
+                          ? "Switch to Student View"
+                          : "Switch to Contributor Studio"}
+                      </button>
+                    )}
                     <button
                       onClick={() => navigateTo("/app/profile")}
                       className="text-left text-base font-medium p-2 rounded-md hover:bg-muted"

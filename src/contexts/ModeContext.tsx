@@ -21,11 +21,10 @@ const transitionMessages: Record<AppMode, string> = {
 const STORAGE_KEY = "eduminity-mode";
 
 export const ModeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, userRole, loading } = useAuth();
+  const { user, loading, isContributor, activeMode, setActiveMode } = useAuth();
   const [mode, setModeState] = useState<AppMode>(() => {
-    // Try to restore mode from localStorage
     if (typeof window !== "undefined") {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = localStorage.getItem("eduminity-active-mode") || localStorage.getItem(STORAGE_KEY);
       if (stored === "student" || stored === "contributor") {
         return stored;
       }
@@ -35,36 +34,23 @@ export const ModeProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [transitionMessage, setTransitionMessage] = useState("");
 
-  // Auto-set mode based on user role on initial login
+  // Follow the auth active mode. Contributors are not forced into Creator Studio.
   useEffect(() => {
     if (loading) return;
 
     if (!user) {
       setModeState("public");
-      localStorage.removeItem(STORAGE_KEY);
-    } else {
-      // Check if we have a stored preference
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored === "student" || stored === "contributor") {
-        // Validate that user can access the stored mode
-        if (stored === "contributor" && userRole !== "contributor") {
-          setModeState("student");
-          localStorage.setItem(STORAGE_KEY, "student");
-        } else {
-          setModeState(stored);
-        }
-      } else {
-        // Set based on role
-        if (userRole === "contributor") {
-          setModeState("contributor");
-          localStorage.setItem(STORAGE_KEY, "contributor");
-        } else {
-          setModeState("student");
-          localStorage.setItem(STORAGE_KEY, "student");
-        }
-      }
+      return;
     }
-  }, [user, userRole, loading]);
+
+    if (activeMode === "contributor" && !isContributor) {
+      setActiveMode("student");
+      setModeState("student");
+      return;
+    }
+
+    setModeState(activeMode);
+  }, [user, loading, isContributor, activeMode, setActiveMode]);
 
   // Apply mode class to document
   useEffect(() => {
@@ -76,15 +62,15 @@ export const ModeProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const setMode = useCallback((newMode: AppMode) => {
     if (newMode === mode) return;
-    
+    if (newMode === "contributor" && !isContributor) return;
+
+    if (newMode === "student" || newMode === "contributor") {
+      setActiveMode(newMode);
+    }
+
     setIsTransitioning(true);
     setTransitionMessage(transitionMessages[newMode]);
-    
-    // Save preference to localStorage
-    if (newMode !== "public") {
-      localStorage.setItem(STORAGE_KEY, newMode);
-    }
-    
+
     setTimeout(() => {
       setModeState(newMode);
       setTimeout(() => {
@@ -92,7 +78,7 @@ export const ModeProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setTransitionMessage("");
       }, 600);
     }, 300);
-  }, [mode]);
+  }, [mode, isContributor, setActiveMode]);
 
   return (
     <ModeContext.Provider value={{ mode, setMode, isTransitioning, transitionMessage }}>

@@ -14,6 +14,7 @@ import {
   Wallet,
   ShieldCheck,
   LogOut,
+  ArrowLeftRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -25,7 +26,7 @@ interface ContributorLayoutProps {
 const ADMIN_EMAIL = "business.neurovane@gmail.com";
 
 export const ContributorLayout = ({ children }: ContributorLayoutProps) => {
-  const { user, loading } = useAuth();
+  const { user, loading, isContributor, activeMode, toggleMode } = useAuth();
   const navigate = useNavigate();
   const { mode, setMode } = useMode();
   const [showModeToast, setShowModeToast] = useState(false);
@@ -183,6 +184,21 @@ export const ContributorLayout = ({ children }: ContributorLayoutProps) => {
                       </p>
                       <p className="text-[11px] text-purple-400">Creator Studio</p>
                     </div>
+
+                    {isContributor && (
+                      <button
+                        onClick={() => {
+                          setProfileMenuOpen(false);
+                          toggleMode();
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-white/10 text-left transition-colors text-teal-300"
+                      >
+                        <ArrowLeftRight className="h-4 w-4 text-teal-400" />
+                        {activeMode === "contributor"
+                          ? "Switch to Student View"
+                          : "Switch to Contributor Studio"}
+                      </button>
+                    )}
 
                     <button
                       onClick={() => navigateTo("/app/creator-studio", "contributor")}

@@ -20,7 +20,7 @@ export const ProtectedRoute = ({
   children,
   allowedPortal = "any",
 }: ProtectedRouteProps) => {
-  const { user, loading, userRole, canAccessStudent, canAccessCreator } = useAuth();
+  const { user, loading, userRole, activeMode, canAccessCreator } = useAuth();
 
   if (loading || (user && userRole === null)) {
     return <ProtectedRouteLoader />;
@@ -34,7 +34,11 @@ export const ProtectedRoute = ({
     return <Navigate to="/app/student-dashboard" replace />;
   }
 
-  if (allowedPortal === "student" && !canAccessStudent) {
+  // Contributors keep full student access whenever they are in student mode.
+  const canUseStudentPortal =
+    activeMode === "student" || userRole === "student" || userRole === "both";
+
+  if (allowedPortal === "student" && !canUseStudentPortal) {
     return <Navigate to="/app/creator-studio" replace />;
   }
 
