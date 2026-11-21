@@ -54,7 +54,7 @@ import Notifications from "./pages/app/Notifications";
 import HelpRequests from "./pages/app/HelpRequests";
 import FeedbackUpdates from "./pages/FeedbackUpdates";
 import UploadMaterial from "./pages/UploadMaterial";
-
+import Ak47EasterEgg from "@/pages/Ak47EasterEgg";
 const HomeRoute = () => {
   const { user, loading } = useAuth();
 
@@ -98,7 +98,7 @@ const App = () => (
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/creator/:username" element={<PublicCreatorProfile />} />
-
+              <Route path="/secret/ak47" element={<Ak47EasterEgg />} />
               {/* Shared Protected App Routes */}
               <Route path="/app" element={<ProtectedRoute><AppHome /></ProtectedRoute>} />
               <Route path="/app/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

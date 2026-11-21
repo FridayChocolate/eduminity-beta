@@ -49,16 +49,16 @@ export const HeroSection = () => {
 
   return (
     <section className="relative overflow-hidden rounded-2xl mb-6 md:mb-8 border border-border bg-[#071120] shadow-lg">
-      {/* Full Hero Banner Image */}
-      <div className="relative w-full aspect-[16/9] max-h-[460px] overflow-hidden">
+      {/* Full Hero Banner Image - never crops on any screen */}
+      <div className="relative w-full overflow-hidden bg-[#071120]">
         <img
           src="/eduminity-hero.jpg"
           alt="Eduminity - Learn. Connect. Share."
-          className="w-full h-full object-cover object-center"
+          className="w-full h-auto block object-contain"
           draggable={false}
         />
         {/* Subtle bottom fade so buttons stay readable */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#071120] via-[#071120]/25 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#071120] to-transparent" />
       </div>
 
       {/* Action Bar & Live Counter */}

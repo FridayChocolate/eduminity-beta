@@ -41,6 +41,14 @@ export const SearchDialog = () => {
   const [filter, setFilter] = useState<SearchFilter>("all");
   const navigate = useNavigate();
 
+  const isAk47EasterEgg = query.toLowerCase().replace(/[^a-z0-9]/g, "") === "ak47";
+
+  const triggerEasterEgg = () => {
+    setOpen(false);
+    setQuery("");
+    navigate("/secret/ak47");
+  };
+
   const filteredResults = mockResults.filter((result) => {
     const matchesQuery = result.title.toLowerCase().includes(query.toLowerCase()) ||
       result.subtitle.toLowerCase().includes(query.toLowerCase());
@@ -97,6 +105,12 @@ export const SearchDialog = () => {
               placeholder="Search notes, materials, or creators..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && isAk47EasterEgg) {
+                  e.preventDefault();
+                  triggerEasterEgg();
+                }
+              }}
               className="pl-10 pr-10 bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-primary h-11"
               autoFocus
             />
@@ -154,7 +168,32 @@ export const SearchDialog = () => {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.2, delay: 0.2 }}
         >
-          {query.length === 0 ? (
+          {isAk47EasterEgg ? (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              onClick={triggerEasterEgg}
+              className="w-full flex items-center gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 transition-colors text-left group"
+              whileHover={{ x: 4 }}
+            >
+              <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0 text-xl">
+                🐱
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-amber-400 truncate">
+                    Sgt. Whiskers&apos; Classified Field Manual
+                  </span>
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-amber-500/20 text-amber-300">
+                    Top Secret
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground truncate">
+                  Press Enter or click to open classified briefing...
+                </p>
+              </div>
+            </motion.button>
+          ) : query.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               <Search className="h-12 w-12 mx-auto mb-3 opacity-50" />
               <p className="text-sm">Start typing to search</p>
