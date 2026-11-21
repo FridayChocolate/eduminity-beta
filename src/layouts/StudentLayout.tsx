@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { PageTransition } from "@/components/PageTransition";
 
 interface StudentLayoutProps {
   children: ReactNode;
@@ -31,15 +33,18 @@ export const StudentLayout = ({ children }: StudentLayoutProps) => {
 
   return (
     <div 
-      className="min-h-screen bg-background flex w-full" 
+      className="min-h-screen bg-background flex w-full overflow-x-hidden" 
       data-mode="student"
     >
       <StudentSidebar />
       <main className={cn(
-        "flex-1 overflow-auto",
+        "flex-1 min-w-0 w-full overflow-x-hidden overflow-y-auto",
         "bg-background"
       )}>
-        {children}
+        <div className="px-4 pt-4 md:px-6">
+          <Breadcrumbs />
+        </div>
+        <PageTransition>{children}</PageTransition>
       </main>
     </div>
   );
