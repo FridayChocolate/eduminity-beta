@@ -79,28 +79,28 @@ export const Header = () => {
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 w-full border-b border-border backdrop-blur transition-mode",
+        "sticky top-0 z-50 w-full max-w-full border-b border-border backdrop-blur transition-mode",
         "bg-background/95 supports-[backdrop-filter]:bg-background/60",
         isCreatorMode && "border-creator-border/50"
       )}
     >
-      <div className="container flex h-16 items-center justify-between px-4">
-        <div className="flex items-center gap-4 md:gap-8">
+      <div className="container flex h-14 sm:h-16 items-center justify-between gap-2 px-3 sm:px-4 max-w-full">
+        <div className="flex items-center gap-3 md:gap-8 min-w-0">
           <Link
             to="/"
             aria-label="Eduminity home"
-            className="flex items-center gap-2 shrink-0 transition-opacity hover:opacity-90"
+            className="flex items-center gap-1.5 sm:gap-2 shrink-0 transition-opacity hover:opacity-90"
           >
             <img
               src="/eduminity-logo.png"
               alt="Eduminity"
-              className="h-8 w-8 object-contain select-none"
+              className="h-7 w-7 sm:h-8 sm:w-8 object-contain select-none"
               draggable={false}
             />
-            <span className="font-bold text-lg tracking-tight text-foreground">
+            <span className="font-bold text-base sm:text-lg tracking-tight text-foreground">
               Eduminity
             </span>
-            <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/30 leading-none">
+            <span className="hidden sm:inline-block text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/30 leading-none">
               Beta
             </span>
           </Link>
@@ -161,7 +161,7 @@ export const Header = () => {
           </nav>
         </div>
 
-        <div className="flex items-center gap-1 md:gap-2">
+        <div className="flex items-center gap-0.5 sm:gap-1.5 md:gap-2 shrink-0">
           {/* Search Button */}
           <SearchDialog />
 
@@ -172,14 +172,14 @@ export const Header = () => {
             </div>
           )}
 
-          {/* Theme Settings */}
+          {/* Theme Settings (hidden on mobile, moved to drawer) */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => navigateTo("/app/theme-settings")}
-                className="hover:bg-muted dark:hover:shadow-glow-teal transition-all"
+                className="hidden sm:inline-flex hover:bg-muted dark:hover:shadow-glow-teal transition-all"
               >
                 <Settings2 className="h-5 w-5" />
               </Button>
@@ -189,15 +189,17 @@ export const Header = () => {
             </TooltipContent>
           </Tooltip>
 
-          {/* Theme Toggle */}
-          <ThemeToggle />
+          {/* Theme Toggle (hidden on mobile, moved to drawer) */}
+          <div className="hidden sm:block">
+            <ThemeToggle />
+          </div>
 
           {user ? (
             <>
               {/* Notification Bell */}
               <NotificationBell />
 
-              {/* Creator Earnings shortcut */}
+              {/* Creator Earnings shortcut (hidden on mobile, available in menu) */}
               {canAccessCreator && (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -205,7 +207,7 @@ export const Header = () => {
                       variant="ghost"
                       size="icon"
                       onClick={() => navigateTo("/app/creator-earnings", "contributor")}
-                      className="hover:bg-muted dark:hover:shadow-glow-teal transition-all"
+                      className="hidden md:inline-flex hover:bg-muted dark:hover:shadow-glow-teal transition-all"
                     >
                       <Wallet className="h-4 w-4 md:h-5 md:w-5" />
                     </Button>
@@ -223,13 +225,13 @@ export const Header = () => {
                   size="icon"
                   onClick={() => setProfileMenuOpen((prev) => !prev)}
                   aria-label="Account menu"
-                  className="hover:bg-muted dark:hover:shadow-glow-teal transition-all"
+                  className="h-9 w-9 sm:h-10 sm:w-10 hover:bg-muted dark:hover:shadow-glow-teal transition-all"
                 >
                   <User className="h-4 w-4 md:h-5 md:w-5" />
                 </Button>
 
                 {profileMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-60 rounded-2xl bg-[#1A1A1F] border border-white/10 shadow-2xl z-50 overflow-hidden text-white p-1.5">
+                  <div className="absolute right-0 mt-2 w-60 max-w-[calc(100vw-1rem)] rounded-2xl bg-[#1A1A1F] border border-white/10 shadow-2xl z-50 overflow-hidden text-white p-1.5">
                     <div className="px-3 py-2 border-b border-white/10 mb-1">
                       <p className="text-xs font-semibold text-white truncate">
                         {user.email}
@@ -314,7 +316,7 @@ export const Header = () => {
               </div>
             </>
           ) : (
-            <Button onClick={() => navigate("/auth")} size="sm" className="text-xs md:text-sm">
+            <Button onClick={() => navigate("/auth")} size="sm" className="text-xs px-2.5 sm:px-3 md:text-sm">
               Get Started
             </Button>
           )}
@@ -322,11 +324,11 @@ export const Header = () => {
           {/* Mobile Menu */}
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild className="lg:hidden">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[280px]">
+            <SheetContent side="right" className="w-[280px] max-w-[85vw] overflow-y-auto">
               <nav className="flex flex-col gap-3 mt-8">
                 {canSwitchModes && (
                   <div className="pb-4 border-b border-border">
@@ -386,9 +388,21 @@ export const Header = () => {
                   </>
                 )}
 
+                {/* Appearance controls on mobile */}
+                <div className="border-t border-border my-2 pt-3 flex items-center justify-between px-2">
+                  <button
+                    onClick={() => navigateTo("/app/theme-settings")}
+                    className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+                  >
+                    <Settings2 className="h-4 w-4" />
+                    Theme Settings
+                  </button>
+                  <ThemeToggle />
+                </div>
+
                 {user && (
                   <>
-                    <div className="border-t border-border my-2" />
+                    <div className="border-t border-border my-1" />
                     {isContributor && (
                       <button
                         onClick={() => {

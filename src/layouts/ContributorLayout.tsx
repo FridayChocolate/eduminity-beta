@@ -90,7 +90,7 @@ export const ContributorLayout = ({ children }: ContributorLayoutProps) => {
   }
 
   return (
-    <div className="flex min-h-screen bg-background contributor-mode">
+    <div className="flex min-h-screen w-full overflow-x-hidden bg-background contributor-mode">
       {/* Animated gradient background */}
       <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
         <div
@@ -117,50 +117,52 @@ export const ContributorLayout = ({ children }: ContributorLayoutProps) => {
       )}
 
       {/* Desktop Sidebar */}
-      <div className="hidden md:block">
+      <div className="hidden md:block shrink-0">
         <ContributorSidebar />
       </div>
 
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 min-w-0 w-full overflow-x-hidden">
         {/* Top Bar with Notifications */}
-        <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-creator-border/30">
-          <div className="flex items-center justify-between px-4 sm:px-6 md:px-8 py-3">
-            {/* Mobile Menu */}
-            <div className="md:hidden">
-              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-10 w-10">
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="p-0 w-72 bg-card border-creator-border/50">
-                  <ContributorSidebar onNavigate={() => setMobileMenuOpen(false)} />
-                </SheetContent>
-              </Sheet>
+        <div className="sticky top-0 z-40 w-full bg-background/80 backdrop-blur-xl border-b border-creator-border/30">
+          <div className="flex items-center justify-between gap-2 px-2 sm:px-6 md:px-8 py-2.5 sm:py-3">
+            {/* Left side: Mobile Menu + Logo */}
+            <div className="flex items-center gap-1.5 min-w-0">
+              <div className="md:hidden shrink-0">
+                <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-9 w-9">
+                      <Menu className="h-5 w-5" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left" className="p-0 w-72 bg-card border-creator-border/50">
+                    <ContributorSidebar onNavigate={() => setMobileMenuOpen(false)} />
+                  </SheetContent>
+                </Sheet>
+              </div>
+
+              {/* Clickable Logo for mobile */}
+              <button
+                onClick={() => navigateTo("/app/creator-studio")}
+                className="md:hidden flex items-center gap-2 hover:opacity-85 transition-opacity min-w-0"
+              >
+                <div className="w-8 h-8 shrink-0 rounded-lg bg-gradient-to-br from-creator-primary to-creator-violet flex items-center justify-center">
+                  <Sparkles className="h-4 w-4 text-background" />
+                </div>
+                <span className="hidden sm:inline font-bold text-sm truncate">Creator Studio</span>
+              </button>
+
+              {/* Desktop Quick Home Anchor */}
+              <button
+                onClick={() => navigateTo("/app/creator-studio")}
+                className="hidden md:flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-creator-primary transition-colors"
+              >
+                <Sparkles className="h-4 w-4 text-creator-primary" />
+                <span>Creator Dashboard</span>
+              </button>
             </div>
 
-            {/* Clickable Logo for mobile */}
-            <button
-              onClick={() => navigateTo("/app/creator-studio")}
-              className="md:hidden flex items-center gap-2 hover:opacity-85 transition-opacity"
-            >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-creator-primary to-creator-violet flex items-center justify-center">
-                <Sparkles className="h-4 w-4 text-background" />
-              </div>
-              <span className="font-bold text-sm">Creator Studio</span>
-            </button>
-
-            {/* Desktop Quick Home Anchor */}
-            <button
-              onClick={() => navigateTo("/app/creator-studio")}
-              className="hidden md:flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-creator-primary transition-colors"
-            >
-              <Sparkles className="h-4 w-4 text-creator-primary" />
-              <span>Creator Dashboard</span>
-            </button>
-
             {/* Right side actions */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
               {/* Mode Switcher */}
               <ModeSwitcher />
 
@@ -171,13 +173,13 @@ export const ContributorLayout = ({ children }: ContributorLayoutProps) => {
                   size="icon"
                   onClick={() => setProfileMenuOpen((prev) => !prev)}
                   aria-label="Account menu"
-                  className="h-10 w-10 rounded-xl hover:bg-creator-primary/10 hover:text-creator-primary transition-all"
+                  className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl hover:bg-creator-primary/10 hover:text-creator-primary transition-all"
                 >
                   <User className="h-5 w-5" />
                 </Button>
 
                 {profileMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-60 rounded-2xl bg-[#1A1A1F] border border-white/10 shadow-2xl z-50 overflow-hidden text-white p-1.5">
+                  <div className="absolute right-0 mt-2 w-60 max-w-[calc(100vw-1rem)] rounded-2xl bg-[#1A1A1F] border border-white/10 shadow-2xl z-50 overflow-hidden text-white p-1.5">
                     <div className="px-3 py-2 border-b border-white/10 mb-1">
                       <p className="text-xs font-semibold text-white truncate">
                         {user?.email}
@@ -261,7 +263,7 @@ export const ContributorLayout = ({ children }: ContributorLayoutProps) => {
           </div>
         </div>
 
-        <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto">
+        <div className="p-3 sm:p-6 md:p-8 max-w-7xl mx-auto w-full min-w-0">
           {children}
         </div>
       </main>
