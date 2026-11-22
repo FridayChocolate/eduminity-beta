@@ -72,6 +72,9 @@ export const useAuth = () => {
 
   useEffect(() => {
     const syncFromCache = () => {
+      setSession(cachedSession);
+      setUser(cachedUser);
+      setUserRole(cachedRole);
       setIsContributor(cachedIsContributor);
       setActiveModeState(cachedActiveMode);
     };
@@ -185,23 +188,37 @@ export const useAuth = () => {
   }, []);
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
+    try {
+      const { error } = await supabase.auth.signOut({ scope: "local" });
+      if (error && !error.message.toLowerCase().includes("session missing")) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
+    } catch {
+      // Ignore network or missing-session errors and force local logout
+    } finally {
       cachedSession = null;
       cachedUser = null;
       cachedRole = null;
       cachedIsContributor = false;
+      cachedActiveMode = "student";
+      localStorage.removeItem(ACTIVE_MODE_KEY);
+      localStorage.removeItem(LEGACY_MODE_KEY);
       setSession(null);
       setUser(null);
       setUserRole(null);
       setIsContributor(false);
+      setActiveModeState("student");
       emitAuthCache();
+
+      if (navigateImpl) {
+        navigateImpl("/");
+      } else {
+        window.location.assign("/");
+      }
     }
   };
 
