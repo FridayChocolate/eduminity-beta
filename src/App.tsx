@@ -13,6 +13,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AuthNavigatorBridge, useAuth } from "@/hooks/useAuth";
 import { PageTransition } from "@/components/PageTransition";
+import { InstallPrompt } from "@/components/InstallPrompt";
 
 // Public pages
 import HomePage from "./pages/HomePage";
@@ -161,9 +162,10 @@ const App = () => (
                 {/* Catch-all */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
-            </PageTransition>
+              </PageTransition>
             <QuickActionsMenu />
             <ChatBot />
+            <InstallPrompt />
           </BrowserRouter>
         </ModeProvider>
       </TooltipProvider>
