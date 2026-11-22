@@ -12,7 +12,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useRef, useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -27,7 +26,7 @@ import { SearchDialog } from "@/components/SearchDialog";
 const ADMIN_EMAIL = "business.neurovane@gmail.com";
 
 export const Header = () => {
-  const { user, canAccessCreator, canSwitchModes, isContributor, activeMode, toggleMode } = useAuth();
+  const { user, canAccessCreator, canSwitchModes, isContributor, activeMode, toggleMode, signOut } = useAuth();
   const { mode, setMode } = useMode();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -49,22 +48,13 @@ export const Header = () => {
   }, []);
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast({
-        title: "Could not log out",
-        description: error.message,
-        variant: "destructive",
-      });
-      return;
-    }
+    setProfileMenuOpen(false);
+    setMobileMenuOpen(false);
+    await signOut();
     toast({
       title: "Logged out",
       description: "You have been successfully logged out.",
     });
-    setProfileMenuOpen(false);
-    setMobileMenuOpen(false);
-    navigate("/");
   };
 
   const navigateTo = (path: string, targetMode?: "student" | "contributor") => {
