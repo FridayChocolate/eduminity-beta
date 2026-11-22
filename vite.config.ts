@@ -15,6 +15,11 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
+      workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
+      },
       devOptions: {
         enabled: true,
       },
@@ -56,9 +61,6 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // Pre-bundle the page-head library at server start. If Vite only discovers it
-  // mid-session it re-emits it under a new URL, and a screen can then hold two
-  // copies whose contexts do not match — that crashes the app on entry.
   optimizeDeps: {
     include: ["react-helmet-async"],
   },

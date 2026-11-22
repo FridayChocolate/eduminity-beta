@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 
 export type UserRole = "student" | "contributor" | "both" | null;
 export type ActiveMode = "student" | "contributor";
@@ -68,7 +67,6 @@ export const useAuth = () => {
   const [isContributor, setIsContributor] = useState(cachedIsContributor);
   const [activeMode, setActiveModeState] = useState<ActiveMode>(cachedActiveMode);
   const [loading, setLoading] = useState(!hasInitialized);
-  const { toast } = useToast();
 
   useEffect(() => {
     const syncFromCache = () => {
@@ -189,24 +187,26 @@ export const useAuth = () => {
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut({ scope: "local" });
-      if (error && !error.message.toLowerCase().includes("session missing")) {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
+      await supabase.auth.signOut({ scope: "local" });
     } catch {
-      // Ignore network or missing-session errors and force local logout
+      // Ignore missing session errors
     } finally {
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith("sb-") || key === ACTIVE_MODE_KEY || key === LEGACY_MODE_KEY) {
+          localStorage.removeItem(key);
+        }
+      });
+      Object.keys(sessionStorage).forEach((key) => {
+        if (key.startsWith("sb-")) {
+          sessionStorage.removeItem(key);
+        }
+      });
+
       cachedSession = null;
       cachedUser = null;
       cachedRole = null;
       cachedIsContributor = false;
       cachedActiveMode = "student";
-      localStorage.removeItem(ACTIVE_MODE_KEY);
-      localStorage.removeItem(LEGACY_MODE_KEY);
       setSession(null);
       setUser(null);
       setUserRole(null);
@@ -214,11 +214,7 @@ export const useAuth = () => {
       setActiveModeState("student");
       emitAuthCache();
 
-      if (navigateImpl) {
-        navigateImpl("/");
-      } else {
-        window.location.assign("/");
-      }
+      window.location.replace("/");
     }
   };
 
