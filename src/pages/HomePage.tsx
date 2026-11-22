@@ -17,8 +17,6 @@ import {
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { Footer } from "@/components/Footer";
-import logoAsset from "@/assets/eduminity-logo.png.asset.json";
-import logoInverseAsset from "@/assets/eduminity-logo-inverse.png.asset.json";
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -135,19 +133,14 @@ const HomePage = () => {
         <nav className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
-              <Link to="/" aria-label="Eduminity home" className="flex items-center transition-opacity hover:opacity-90">
+              <Link to="/" aria-label="Eduminity home" className="flex items-center gap-2.5 transition-opacity hover:opacity-90">
                 <img
-                  src={logoAsset.url}
+                  src="/eduminity-logo.png"
                   alt="Eduminity"
-                  className="h-10 w-auto object-contain sm:h-11 md:h-12 dark:hidden"
+                  className="h-9 w-9 object-contain sm:h-10 sm:w-10"
                   draggable={false}
                 />
-                <img
-                  src={logoInverseAsset.url}
-                  alt="Eduminity"
-                  className="hidden h-10 w-auto object-contain sm:h-11 md:h-12 dark:block"
-                  draggable={false}
-                />
+                <span className="text-lg font-bold tracking-tight text-foreground">Eduminity</span>
               </Link>
               <div className="hidden md:flex items-center gap-8">
                 <a href="#how-it-works" className="text-muted-foreground hover:text-foreground transition-colors">How It Works</a>
