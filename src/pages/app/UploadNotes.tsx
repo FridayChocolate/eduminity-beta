@@ -5,11 +5,34 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { ShieldCheck, Clock, ArrowLeft } from "lucide-react";
+
+const ADMIN_EMAILS = [
+  "business.neurovane@gmail.com",
+  "shariarlabib04@gmail.com",
+  "tanvirshafi9510@gmail.com",
+];
 
 export default function UploadNotes() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  const meta = user?.user_metadata || {};
+  const isAdmin = Boolean(
+    user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
+  );
+  const isVerified = isAdmin || meta.creator_verified === true;
+
+  // Verification request state
+  const [verificationStatus, setVerificationStatus] = useState<string>(
+    meta.verification_status || "unverified"
+  );
+  const [verifyInstitution, setVerifyInstitution] = useState(meta.institution || "");
+  const [verifyStudentId, setVerifyStudentId] = useState(meta.student_id || "");
+  const [verifyPayout, setVerifyPayout] = useState(meta.payout_number || "");
+  const [submittingVerify, setSubmittingVerify] = useState(false);
+
+  // Upload form state
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
@@ -30,6 +53,137 @@ export default function UploadNotes() {
   const parsedPages = parseInt(pageCount, 10) || 0;
   const requiredPreviews = parsedPages >= 20 ? 3 : 1;
 
+  const handleRequestVerification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!verifyInstitution.trim() || !verifyStudentId.trim() || !verifyPayout.trim()) {
+      return alert("Please fill in all verification fields.");
+    }
+
+    setSubmittingVerify(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          institution: verifyInstitution.trim(),
+          student_id: verifyStudentId.trim(),
+          payout_number: verifyPayout.trim(),
+          verification_status: "pending",
+        },
+      });
+
+      if (error) throw error;
+      setVerificationStatus("pending");
+    } catch (err: any) {
+      alert(err.message || "Could not submit verification request.");
+    } finally {
+      setSubmittingVerify(false);
+    }
+  };
+
+  // VERIFICATION GATE (Blocks unverified creators before rendering the upload form)
+  if (!isVerified) {
+    return (
+      <div className="min-h-screen bg-[#12121A] text-white p-6 md:p-12 font-['Inter']">
+        <div className="max-w-xl mx-auto">
+          <button
+            onClick={() => navigate("/app/creator-studio")}
+            className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-6"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Creator Studio
+          </button>
+
+          <div className="bg-[#1A1A1F] border border-white/10 p-8 rounded-2xl shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-teal-400 to-indigo-500" />
+
+            {verificationStatus === "pending" ? (
+              <div className="text-center py-6 space-y-4">
+                <div className="h-14 w-14 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center mx-auto">
+                  <Clock className="h-7 w-7 text-amber-400" />
+                </div>
+                <h1 className="text-2xl font-bold text-white">Verification Under Review</h1>
+                <p className="text-sm text-gray-400 max-w-md mx-auto leading-relaxed">
+                  We received your creator verification details. Our team typically approves
+                  student creators within 24 hours so you can start publishing notes.
+                </p>
+                <div className="pt-2">
+                  <Button
+                    onClick={() => navigate("/app/creator-studio")}
+                    className="bg-white/10 hover:bg-white/20 text-white rounded-xl"
+                  >
+                    Return to Creator Studio
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="h-11 w-11 rounded-xl bg-teal-500/15 border border-teal-500/30 flex items-center justify-center">
+                    <ShieldCheck className="h-6 w-6 text-teal-400" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold text-white">Verify Your Creator Account</h1>
+                    <p className="text-xs text-gray-400">
+                      One-time check to keep Eduminity notes authentic and high quality.
+                    </p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleRequestVerification} className="space-y-4 mt-6">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                      University / College
+                    </label>
+                    <Input
+                      required
+                      value={verifyInstitution}
+                      onChange={(e) => setVerifyInstitution(e.target.value)}
+                      placeholder="e.g., Daffodil International University"
+                      className="bg-[#2A2A32] border-transparent text-white h-11"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                      Student ID Number
+                    </label>
+                    <Input
+                      required
+                      value={verifyStudentId}
+                      onChange={(e) => setVerifyStudentId(e.target.value)}
+                      placeholder="e.g., 253-33-026"
+                      className="bg-[#2A2A32] border-transparent text-white h-11"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                      bKash / Nagad Number (For Payouts)
+                    </label>
+                    <Input
+                      required
+                      value={verifyPayout}
+                      onChange={(e) => setVerifyPayout(e.target.value)}
+                      placeholder="e.g., 01XXXXXXXXX"
+                      className="bg-[#2A2A32] border-transparent text-white h-11"
+                    />
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={submittingVerify}
+                    className="w-full bg-teal-500 hover:bg-teal-400 text-black font-bold h-12 rounded-xl mt-2"
+                  >
+                    {submittingVerify ? "Submitting..." : "Submit for Verification"}
+                  </Button>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setFile(e.target.files[0]);
@@ -39,7 +193,7 @@ export default function UploadNotes() {
   const handlePreviewChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
     const selected = Array.from(e.target.files);
-    const combined = [...previewImages, ...selected].slice(0, 3); // Hard cap at 3
+    const combined = [...previewImages, ...selected].slice(0, 3);
     if (previewImages.length + selected.length > 3) {
       alert("Maximum 3 preview images allowed. Only the first 3 were kept.");
     }
@@ -69,7 +223,6 @@ export default function UploadNotes() {
       return alert("Please describe your custom class or level.");
     }
 
-    // MANDATORY PREVIEW ENFORCEMENT
     if (previewImages.length < requiredPreviews) {
       return alert(
         parsedPages >= 20
@@ -81,7 +234,6 @@ export default function UploadNotes() {
     setLoading(true);
 
     try {
-      // 1. Upload main study material
       const fileExt = file.name.split(".").pop();
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
       const filePath = `${user.id}/${fileName}`;
@@ -92,7 +244,6 @@ export default function UploadNotes() {
 
       if (uploadError) throw uploadError;
 
-      // 2. Upload all preview images (1 to 3)
       const uploadedPreviewPaths: string[] = [];
       for (const img of previewImages) {
         const imgExt = img.name.split(".").pop();
@@ -107,7 +258,6 @@ export default function UploadNotes() {
         uploadedPreviewPaths.push(imgPath);
       }
 
-      // 3. Save to Postgres database
       const { error: dbError } = await supabase
         .from("materials" as any)
         .insert({
@@ -118,7 +268,7 @@ export default function UploadNotes() {
           category: finalCategory,
           class_level: finalClassLevel,
           file_path: filePath,
-          preview_image_path: uploadedPreviewPaths[0], // Backwards compatibility
+          preview_image_path: uploadedPreviewPaths[0],
           preview_image_paths: uploadedPreviewPaths,
           user_id: user.id,
         });
@@ -197,7 +347,6 @@ export default function UploadNotes() {
             </div>
           </div>
 
-          {/* Subject / Category + Class / Level */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-xs font-semibold text-gray-300 uppercase tracking-wider">
@@ -258,7 +407,6 @@ export default function UploadNotes() {
             </div>
           </div>
 
-          {/* Main File Upload */}
           <div className="space-y-2 pt-2">
             <label className="text-xs font-semibold text-gray-300 uppercase tracking-wider">
               Upload Main File (PDF, ZIP, DOCX)
@@ -280,7 +428,6 @@ export default function UploadNotes() {
             {file && <p className="text-sm text-teal-400 mt-2 font-medium">Selected: {file.name}</p>}
           </div>
 
-          {/* Mandatory Preview Images Upload */}
           <div className="space-y-2 pt-2">
             <div className="flex justify-between items-center">
               <label className="text-xs font-semibold text-gray-300 uppercase tracking-wider">

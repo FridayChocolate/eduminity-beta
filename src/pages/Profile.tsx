@@ -11,35 +11,66 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
-  User,
   GraduationCap,
   Sparkles,
-  CheckCircle2,
   Mail,
   Calendar,
   ShoppingBag,
   ShieldCheck,
   Loader2,
   Save,
+  BookOpen,
+  Star,
+  Wallet,
 } from "lucide-react";
 
-const ADMIN_EMAIL = "business.eduminity@gmail.com";
+const ADMIN_EMAILS = [
+  "business.neurovane@gmail.com",
+  "shariarlabib04@gmail.com",
+  "tanvirshafi9510@gmail.com",
+];
 
 export default function Profile() {
-  const { user, userRole, canAccessCreator, canAccessStudent, activeMode } = useAuth();
+  const { user, canAccessCreator, canAccessStudent, activeMode } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Default the profile tab to whichever mode the user is currently in
+  const [profileTab, setProfileTab] = useState<"student" | "contributor">(
+    activeMode === "contributor" && canAccessCreator ? "contributor" : "student"
+  );
+
+  // Shared & Student fields
   const [fullName, setFullName] = useState("");
   const [institution, setInstitution] = useState("");
   const [department, setDepartment] = useState("");
+  const [semester, setSemester] = useState("");
   const [bio, setBio] = useState("");
+
+  // Creator-only fields
+  const [creatorTagline, setCreatorTagline] = useState("");
+  const [expertise, setExpertise] = useState("");
+  const [payoutNumber, setPayoutNumber] = useState("");
+
+  // Stats
+  const [unlockedCount, setUnlockedCount] = useState<number>(0);
+  const [reviewsWrittenCount, setReviewsWrittenCount] = useState<number>(0);
+  const [publishedCount, setPublishedCount] = useState<number>(0);
 
   const [saving, setSaving] = useState(false);
   const [upgrading, setUpgrading] = useState(false);
-  const [unlockedCount, setUnlockedCount] = useState<number>(0);
 
-  const isAdmin = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  const isAdmin = Boolean(
+    user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
+  );
+
+  useEffect(() => {
+    if (activeMode === "contributor" && canAccessCreator) {
+      setProfileTab("contributor");
+    } else {
+      setProfileTab("student");
+    }
+  }, [activeMode, canAccessCreator]);
 
   useEffect(() => {
     if (!user) return;
@@ -47,17 +78,33 @@ export default function Profile() {
     setFullName(meta.full_name || "");
     setInstitution(meta.institution || "");
     setDepartment(meta.department || "");
+    setSemester(meta.semester || "");
     setBio(meta.bio || "");
+    setCreatorTagline(meta.creator_tagline || "");
+    setExpertise(meta.expertise || "");
+    setPayoutNumber(meta.payout_number || "");
 
     const fetchStats = async () => {
       try {
-        const { count } = await (supabase as any)
-          .from("purchases")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id)
-          .eq("status", "approved");
+        const [purchasesRes, reviewsRes, materialsRes] = await Promise.all([
+          (supabase as any)
+            .from("purchases")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", user.id)
+            .eq("status", "approved"),
+          (supabase as any)
+            .from("material_reviews")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", user.id),
+          (supabase as any)
+            .from("materials")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", user.id),
+        ]);
 
-        setUnlockedCount(count || 0);
+        setUnlockedCount(purchasesRes.count || 0);
+        setReviewsWrittenCount(reviewsRes.count || 0);
+        setPublishedCount(materialsRes.count || 0);
       } catch {
         // Ignore stat fetch errors
       }
@@ -77,15 +124,19 @@ export default function Profile() {
           full_name: fullName.trim(),
           institution: institution.trim(),
           department: department.trim(),
+          semester: semester.trim(),
           bio: bio.trim(),
+          creator_tagline: creatorTagline.trim(),
+          expertise: expertise.trim(),
+          payout_number: payoutNumber.trim(),
         },
       });
 
       if (error) throw error;
 
       toast({
-        title: "Profile updated",
-        description: "Your profile details have been saved.",
+        title: profileTab === "contributor" ? "Creator profile updated" : "Student profile updated",
+        description: "Your changes have been saved.",
       });
     } catch (err: any) {
       toast({
@@ -107,7 +158,6 @@ export default function Profile() {
         .from("user_roles")
         .insert({ user_id: user.id, role: "contributor" });
 
-      // Ignore duplicate key error if they already have the row
       if (error && !String(error.message || "").toLowerCase().includes("duplicate")) {
         throw error;
       }
@@ -117,7 +167,6 @@ export default function Profile() {
         description: "Your account has been upgraded. Unlocking Creator tools...",
       });
 
-      // Full reload refreshes cached roles in useAuth and opens Creator Studio
       window.location.href = "/app/creator-studio";
     } catch (err: any) {
       toast({
@@ -157,43 +206,92 @@ export default function Profile() {
       })
     : "Recently";
 
+  const isCreatorView = profileTab === "contributor" && canAccessCreator;
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-4xl mx-auto p-6 lg:p-8 space-y-6">
         {/* Top Bar */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <Button variant="ghost" size="sm" onClick={handleBack} className="gap-2">
             <ArrowLeft className="h-4 w-4" />
             {activeMode === "contributor" ? "Back to Creator Studio" : "Back to Dashboard"}
           </Button>
 
-          {isAdmin && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate("/admin")}
-              className="gap-2 border-primary/40 text-primary"
-            >
-              <ShieldCheck className="h-4 w-4" />
-              Admin Panel
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {/* Profile Mode Switcher (Only for dual-role users) */}
+            {canAccessCreator && (
+              <div className="inline-flex rounded-xl bg-muted/60 p-1 border border-border">
+                <button
+                  type="button"
+                  onClick={() => setProfileTab("student")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                    !isCreatorView
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <GraduationCap className="h-3.5 w-3.5" />
+                  Student Profile
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setProfileTab("contributor")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                    isCreatorView
+                      ? "bg-purple-600 text-white shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Creator Profile
+                </button>
+              </div>
+            )}
+
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/admin")}
+                className="gap-2 border-primary/40 text-primary"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Admin
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Profile Header Card */}
         <Card className="bg-card border-border overflow-hidden">
-          <div className="h-24 bg-gradient-to-r from-primary/20 via-purple-500/20 to-cyan-500/20 border-b border-border" />
+          <div
+            className={`h-24 border-b border-border transition-colors ${
+              isCreatorView
+                ? "bg-gradient-to-r from-purple-600/30 via-pink-500/20 to-indigo-500/25"
+                : "bg-gradient-to-r from-teal-500/20 via-primary/20 to-cyan-500/20"
+            }`}
+          />
           <CardContent className="pt-0 px-6 pb-6">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-10">
               <div className="flex items-end gap-4">
-                <div className="h-20 w-20 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center text-2xl font-bold border-4 border-card shadow-md">
+                <div
+                  className={`h-20 w-20 rounded-2xl flex items-center justify-center text-2xl font-bold border-4 border-card shadow-md ${
+                    isCreatorView
+                      ? "bg-purple-600 text-white"
+                      : "bg-primary text-primary-foreground"
+                  }`}
+                >
                   {getInitials()}
                 </div>
                 <div className="pb-1">
                   <h1 className="text-xl font-bold text-foreground">
-                    {fullName || "eduminity Member"}
+                    {fullName || "Eduminity Member"}
                   </h1>
-                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                  {isCreatorView && creatorTagline && (
+                    <p className="text-xs text-purple-400 mt-0.5">{creatorTagline}</p>
+                  )}
+                  <div className="flex flex-wrap items-center gap-2 mt-1.5">
                     {canAccessStudent && (
                       <Badge variant="secondary" className="text-xs gap-1">
                         <GraduationCap className="h-3 w-3" />
@@ -230,34 +328,62 @@ export default function Profile() {
           </CardContent>
         </Card>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Card className="bg-card border-border">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                <ShoppingBag className="h-5 w-5 text-emerald-500" />
-              </div>
-              <div>
-                <p className="text-xl font-bold">{unlockedCount}</p>
-                <p className="text-xs text-muted-foreground">Unlocked Study Materials</p>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Role-Specific Stats */}
+        {isCreatorView ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Card className="bg-card border-border">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                  <BookOpen className="h-5 w-5 text-purple-400" />
+                </div>
+                <div>
+                  <p className="text-xl font-bold">{publishedCount}</p>
+                  <p className="text-xs text-muted-foreground">Published Study Materials</p>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="bg-card border-border">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <User className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-xl font-bold capitalize">
-                  {userRole === "both" ? "Student & Creator" : userRole || "Student"}
-                </p>
-                <p className="text-xs text-muted-foreground">Account Access Level</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            <Card className="bg-card border-border">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                  <Wallet className="h-5 w-5 text-emerald-400" />
+                </div>
+                <div>
+                  <p className="text-base font-bold truncate">
+                    {payoutNumber || "Not set yet"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Payout Number (bKash / Nagad)</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Card className="bg-card border-border">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                  <ShoppingBag className="h-5 w-5 text-emerald-500" />
+                </div>
+                <div>
+                  <p className="text-xl font-bold">{unlockedCount}</p>
+                  <p className="text-xs text-muted-foreground">Unlocked Study Materials</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card border-border">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                  <Star className="h-5 w-5 text-amber-400" />
+                </div>
+                <div>
+                  <p className="text-xl font-bold">{reviewsWrittenCount}</p>
+                  <p className="text-xs text-muted-foreground">Material Reviews Written</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* 1-Click Become a Creator Card (Only for Student-Only accounts) */}
         {!canAccessCreator && (
@@ -296,61 +422,138 @@ export default function Profile() {
           </Card>
         )}
 
-        {/* Edit Profile Form */}
+        {/* Role-Specific Edit Form */}
         <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-base">Personal Details</CardTitle>
+            <CardTitle className="text-base">
+              {isCreatorView ? "Creator Studio Profile" : "Student Academic Profile"}
+            </CardTitle>
             <CardDescription>
-              Update your academic profile so peers and creators know who you are.
+              {isCreatorView
+                ? "Manage your public creator identity and where you receive payouts."
+                : "Keep your university and department updated for tailored study materials."}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSaveProfile} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
-                  <Input
-                    id="fullName"
-                    placeholder="e.g. Sadman Hasan"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                  />
-                </div>
+              {isCreatorView ? (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="fullName">Creator Name</Label>
+                      <Input
+                        id="fullName"
+                        placeholder="e.g. Sadman Hasan"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="creatorTagline">Creator Tagline</Label>
+                      <Input
+                        id="creatorTagline"
+                        placeholder="e.g. EEE Topper & Circuit Notes"
+                        value={creatorTagline}
+                        onChange={(e) => setCreatorTagline(e.target.value)}
+                      />
+                    </div>
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="institution">University / College / School</Label>
-                  <Input
-                    id="institution"
-                    placeholder="e.g. Daffodil International University"
-                    value={institution}
-                    onChange={(e) => setInstitution(e.target.value)}
-                  />
-                </div>
-              </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="expertise">Subjects / Expertise</Label>
+                      <Input
+                        id="expertise"
+                        placeholder="e.g. Digital Electronics, Calculus, Physics"
+                        value={expertise}
+                        onChange={(e) => setExpertise(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="payoutNumber">Payout Number (bKash / Nagad)</Label>
+                      <Input
+                        id="payoutNumber"
+                        placeholder="e.g. 01XXXXXXXXX"
+                        value={payoutNumber}
+                        onChange={(e) => setPayoutNumber(e.target.value)}
+                      />
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="department">Department / Class / Major</Label>
-                <Input
-                  id="department"
-                  placeholder="e.g. B.Sc in EEE / HSC Science"
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bio">Creator Bio</Label>
+                    <Textarea
+                      id="bio"
+                      placeholder="Tell students why they can trust your notes and exam guides..."
+                      rows={3}
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="fullName">Full Name</Label>
+                      <Input
+                        id="fullName"
+                        placeholder="e.g. Sadman Hasan"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="institution">University / College / School</Label>
+                      <Input
+                        id="institution"
+                        placeholder="e.g. Daffodil International University"
+                        value={institution}
+                        onChange={(e) => setInstitution(e.target.value)}
+                      />
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="bio">Short Bio</Label>
-                <Textarea
-                  id="bio"
-                  placeholder="Tell others what you're studying or what notes you share..."
-                  rows={3}
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                />
-              </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="department">Department / Major</Label>
+                      <Input
+                        id="department"
+                        placeholder="e.g. B.Sc in EEE / HSC Science"
+                        value={department}
+                        onChange={(e) => setDepartment(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="semester">Current Year / Semester</Label>
+                      <Input
+                        id="semester"
+                        placeholder="e.g. 2nd Year / Fall 2026"
+                        value={semester}
+                        onChange={(e) => setSemester(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="bio">Short Bio</Label>
+                    <Textarea
+                      id="bio"
+                      placeholder="What are you currently studying or preparing for?"
+                      rows={3}
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="flex items-center justify-end pt-2">
-                <Button type="submit" disabled={saving}>
+                <Button
+                  type="submit"
+                  disabled={saving}
+                  className={isCreatorView ? "bg-purple-600 hover:bg-purple-700 text-white" : ""}
+                >
                   {saving ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -359,7 +562,7 @@ export default function Profile() {
                   ) : (
                     <>
                       <Save className="h-4 w-4 mr-2" />
-                      Save Changes
+                      Save {isCreatorView ? "Creator" : "Student"} Profile
                     </>
                   )}
                 </Button>

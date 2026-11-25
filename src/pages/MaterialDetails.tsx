@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, Star, Trash2, MessageSquare } from "lucide-react";
 
 type PaymentProviderKey = "bkash" | "nagad" | "rocket";
 
@@ -11,7 +11,17 @@ interface TeamAccount {
   label: string;
   holder: string;
   numbers: Record<PaymentProviderKey, string>;
-  blurred?: boolean; // Set to false once you paste the real number
+  blurred?: boolean;
+}
+
+interface Review {
+  id: string;
+  material_id: string;
+  user_id: string;
+  reviewer_name: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
 }
 
 const TEAM_ACCOUNTS: TeamAccount[] = [
@@ -92,8 +102,9 @@ export default function MaterialDetails() {
   const [purchaseStatus, setPurchaseStatus] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserName, setCurrentUserName] = useState<string>("Student");
 
-  // Preview Image Modal state (supports 1-3 images)
+  // Preview Image Modal state
   const [showPreview, setShowPreview] = useState(false);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
@@ -104,9 +115,41 @@ export default function MaterialDetails() {
   const [trxId, setTrxId] = useState("");
   const [copied, setCopied] = useState(false);
 
+  // Ratings & Reviews state
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [userRating, setUserRating] = useState<number>(0);
+  const [hoverRating, setHoverRating] = useState<number>(0);
+  const [userComment, setUserComment] = useState<string>("");
+  const [submittingReview, setSubmittingReview] = useState<boolean>(false);
+  const [hasExistingReview, setHasExistingReview] = useState<boolean>(false);
+
   useEffect(() => {
     if (id) loadPageData();
   }, [id]);
+
+  const fetchReviews = async (activeUserId: string | null) => {
+    const { data, error } = await supabase
+      .from("material_reviews" as any)
+      .select("*")
+      .eq("material_id", id)
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      const list = data as unknown as Review[];
+      setReviews(list);
+
+      if (activeUserId) {
+        const mine = list.find((r) => r.user_id === activeUserId);
+        if (mine) {
+          setUserRating(mine.rating);
+          setUserComment(mine.comment || "");
+          setHasExistingReview(true);
+        } else {
+          setHasExistingReview(false);
+        }
+      }
+    }
+  };
 
   const loadPageData = async () => {
     try {
@@ -123,8 +166,15 @@ export default function MaterialDetails() {
         data: { user },
       } = await supabase.auth.getUser();
 
+      const activeUid = user?.id ?? null;
       if (user) {
         setCurrentUserId(user.id);
+        const displayName =
+          user.user_metadata?.full_name ||
+          user.user_metadata?.name ||
+          user.email?.split("@")[0] ||
+          "Student";
+        setCurrentUserName(displayName);
 
         const { data: purchaseData } = await supabase
           .from("purchases" as any)
@@ -139,12 +189,68 @@ export default function MaterialDetails() {
           setPurchaseStatus((purchaseData as any).status);
         }
       }
+
+      await fetchReviews(activeUid);
     } catch (error: any) {
       console.error("Error loading material:", error.message);
       alert("Material not found.");
       navigate("/app/materials");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUserId) {
+      alert("Please log in to leave a review.");
+      navigate("/auth");
+      return;
+    }
+    if (userRating < 1 || userRating > 5) {
+      alert("Please select a star rating from 1 to 5.");
+      return;
+    }
+
+    setSubmittingReview(true);
+    try {
+      const { error } = await supabase.from("material_reviews" as any).upsert(
+        {
+          material_id: id,
+          user_id: currentUserId,
+          reviewer_name: currentUserName,
+          rating: userRating,
+          comment: userComment.trim() || null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "material_id,user_id" }
+      );
+
+      if (error) throw error;
+      await fetchReviews(currentUserId);
+    } catch (error: any) {
+      console.error("Review error:", error.message);
+      alert(`Could not save review: ${error.message}`);
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!confirm("Delete your review?")) return;
+    try {
+      const { error } = await supabase
+        .from("material_reviews" as any)
+        .delete()
+        .eq("id", reviewId);
+
+      if (error) throw error;
+      setUserRating(0);
+      setUserComment("");
+      setHasExistingReview(false);
+      await fetchReviews(currentUserId);
+    } catch (error: any) {
+      alert(`Could not delete review: ${error.message}`);
     }
   };
 
@@ -287,12 +393,17 @@ export default function MaterialDetails() {
   const isPending = purchaseStatus === "pending";
   const previewCount = getPreviewPaths().length;
 
+  const averageRating =
+    reviews.length > 0
+      ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+      : null;
+
   return (
     <div className="min-h-screen bg-[#12121A] text-white p-4 sm:p-6 md:p-12 font-['Inter'] relative overflow-hidden">
       <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none"></div>
 
-      <div className="max-w-4xl mx-auto relative z-10">
-        <div className="mb-6 md:mb-8 relative z-50">
+      <div className="max-w-4xl mx-auto relative z-10 space-y-6 md:space-y-8">
+        <div className="relative z-50">
           <button
             onClick={() => navigate("/app/materials")}
             className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
@@ -301,6 +412,7 @@ export default function MaterialDetails() {
           </button>
         </div>
 
+        {/* Main Material Card */}
         <div className="bg-[#1A1A1F]/80 backdrop-blur-xl border border-white/10 rounded-2xl md:rounded-3xl p-5 sm:p-8 md:p-12 shadow-2xl">
           <div className="flex flex-col md:flex-row justify-between items-start gap-8">
             {/* Left Column */}
@@ -317,6 +429,12 @@ export default function MaterialDetails() {
                 {material.page_count && (
                   <span className="bg-indigo-500/10 border border-indigo-500/20 text-xs font-medium px-3 py-1.5 rounded-lg text-indigo-300">
                     {material.page_count} Pages
+                  </span>
+                )}
+                {averageRating && (
+                  <span className="inline-flex items-center gap-1 bg-amber-500/10 border border-amber-500/30 text-xs font-semibold px-3 py-1.5 rounded-lg text-amber-300">
+                    <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                    {averageRating} ({reviews.length})
                   </span>
                 )}
               </div>
@@ -401,6 +519,158 @@ export default function MaterialDetails() {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* RATINGS & REVIEWS SECTION */}
+        <div className="bg-[#1A1A1F]/80 backdrop-blur-xl border border-white/10 rounded-2xl md:rounded-3xl p-5 sm:p-8 shadow-2xl">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-2.5">
+              <MessageSquare className="h-5 w-5 text-teal-400" />
+              <h2 className="text-xl sm:text-2xl font-bold text-white">
+                Student Reviews ({reviews.length})
+              </h2>
+            </div>
+            {averageRating && (
+              <div className="flex items-center gap-1.5 text-amber-400 font-bold text-lg">
+                <Star className="h-5 w-5 fill-amber-400" />
+                <span>{averageRating}</span>
+                <span className="text-xs text-gray-400 font-normal">/ 5.0</span>
+              </div>
+            )}
+          </div>
+
+          {/* Review Form */}
+          {currentUserId ? (
+            <form
+              onSubmit={handleSubmitReview}
+              className="bg-[#12121A] border border-white/10 rounded-2xl p-4 sm:p-5 mb-8 space-y-4"
+            >
+              <div>
+                <p className="text-sm font-medium text-gray-300 mb-2">
+                  {hasExistingReview ? "Update your rating" : "Rate this material"}
+                </p>
+                <div className="flex items-center gap-1.5">
+                  {[1, 2, 3, 4, 5].map((star) => {
+                    const active = (hoverRating || userRating) >= star;
+                    return (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setUserRating(star)}
+                        onMouseEnter={() => setHoverRating(star)}
+                        onMouseLeave={() => setHoverRating(0)}
+                        className="p-1 transition-transform hover:scale-110"
+                        aria-label={`Rate ${star} stars`}
+                      >
+                        <Star
+                          className={`h-7 w-7 transition-colors ${
+                            active
+                              ? "fill-amber-400 text-amber-400"
+                              : "text-gray-600 hover:text-amber-300"
+                          }`}
+                        />
+                      </button>
+                    );
+                  })}
+                  {userRating > 0 && (
+                    <span className="ml-2 text-xs text-amber-300 font-medium">
+                      {userRating} / 5
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <textarea
+                rows={3}
+                value={userComment}
+                onChange={(e) => setUserComment(e.target.value)}
+                placeholder="Share how helpful these notes were for your exam or class..."
+                className="w-full bg-[#1A1A1F] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-teal-400 resize-none"
+              />
+
+              <div className="flex justify-end">
+                <Button
+                  type="submit"
+                  disabled={submittingReview || userRating === 0}
+                  className="bg-teal-500 hover:bg-teal-600 text-black font-bold px-6 rounded-xl disabled:opacity-40"
+                >
+                  {submittingReview
+                    ? "Saving..."
+                    : hasExistingReview
+                    ? "Update Review"
+                    : "Post Review"}
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <div className="bg-[#12121A] border border-white/10 rounded-2xl p-5 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <p className="text-sm text-gray-400">
+                Log in to rate this material and leave a comment.
+              </p>
+              <Button
+                onClick={() => navigate("/auth")}
+                variant="outline"
+                className="border-teal-500/50 text-teal-300 hover:bg-teal-500/10 rounded-xl"
+              >
+                Log In to Review
+              </Button>
+            </div>
+          )}
+
+          {/* Reviews List */}
+          {reviews.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center py-6">
+              No reviews yet. Be the first student to rate this material!
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {reviews.map((review) => (
+                <div
+                  key={review.id}
+                  className="bg-[#12121A]/80 border border-white/5 rounded-2xl p-4 sm:p-5"
+                >
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div>
+                      <p className="font-semibold text-sm text-white">
+                        {review.reviewer_name}
+                      </p>
+                      <div className="flex items-center gap-1 mt-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star
+                            key={star}
+                            className={`h-3.5 w-3.5 ${
+                              review.rating >= star
+                                ? "fill-amber-400 text-amber-400"
+                                : "text-gray-700"
+                            }`}
+                          />
+                        ))}
+                        <span className="text-[11px] text-gray-500 ml-2">
+                          {new Date(review.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    {review.user_id === currentUserId && (
+                      <button
+                        onClick={() => handleDeleteReview(review.id)}
+                        className="p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                        title="Delete review"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {review.comment && (
+                    <p className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed mt-2">
+                      {review.comment}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
