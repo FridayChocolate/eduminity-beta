@@ -2,23 +2,25 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { isAdminEmail, isContributorOnboardingComplete } from "@/lib/gamification";
+import { ContributorOnboardingModal } from "@/components/ContributorOnboardingModal";
 
 export type UserRole = "student" | "contributor" | "both" | null;
 export type ActiveMode = "student" | "contributor";
 
-const ADMIN_EMAIL = "business.neurovane@gmail.com";
 const ACTIVE_MODE_KEY = "eduminity-active-mode";
 const LEGACY_MODE_KEY = "eduminity-mode";
 
 const STUDENT_HOME = "/app/student-dashboard";
 const CONTRIBUTOR_HOME = "/app/creator-studio";
+const FIRST_STEP_AFTER_INITIATION = "/app/creator-studio";
 
-// Module-level cache so navigating between pages never flashes or loops
 let cachedSession: Session | null = null;
 let cachedUser: User | null = null;
 let cachedRole: UserRole = null;
 let cachedIsContributor = false;
 let hasInitialized = false;
+let onboardingModalOpen = false;
 
 type NavigateFn = (path: string) => void;
 let navigateImpl: NavigateFn | null = null;
@@ -44,20 +46,63 @@ const persistActiveMode = (mode: ActiveMode) => {
   emitAuthCache();
 };
 
+export const openContributorOnboarding = () => {
+  onboardingModalOpen = true;
+  emitAuthCache();
+};
+
 export const registerAuthNavigator = (fn: NavigateFn | null) => {
   navigateImpl = fn;
 };
 
-/** Mount inside the router so toggleMode can change routes. */
+/** Mount inside the router so toggleMode and ContributorOnboardingModal work globally. */
 export const AuthNavigatorBridge = () => {
   const navigate = useNavigate();
+  const [modalOpen, setModalOpen] = useState(onboardingModalOpen);
+  const [currentUser, setCurrentUser] = useState<User | null>(cachedUser);
 
   useEffect(() => {
     registerAuthNavigator(navigate);
-    return () => registerAuthNavigator(null);
+    const listener = () => {
+      setModalOpen(onboardingModalOpen);
+      setCurrentUser(cachedUser);
+    };
+    modeListeners.add(listener);
+    return () => {
+      registerAuthNavigator(null);
+      modeListeners.delete(listener);
+    };
   }, [navigate]);
 
-  return null;
+  const handleOnboardingCompleted = async () => {
+    const { data } = await supabase.auth.getUser();
+    if (data?.user) {
+      cachedUser = data.user;
+    }
+    cachedIsContributor = true;
+    cachedRole = "both";
+    onboardingModalOpen = false;
+    persistActiveMode("contributor");
+
+    // Move directly to what needs to be done next: uploading their first note
+    if (navigateImpl) {
+      navigateImpl(FIRST_STEP_AFTER_INITIATION);
+    } else {
+      window.location.assign(FIRST_STEP_AFTER_INITIATION);
+    }
+  };
+
+  return (
+    <ContributorOnboardingModal
+      open={modalOpen}
+      onClose={() => {
+        onboardingModalOpen = false;
+        emitAuthCache();
+      }}
+      user={currentUser}
+      onCompleted={handleOnboardingCompleted}
+    />
+  );
 };
 
 export const useAuth = () => {
@@ -84,7 +129,7 @@ export const useAuth = () => {
 
   const fetchUserRole = async (currentUser: User): Promise<UserRole> => {
     try {
-      if (currentUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+      if (isAdminEmail(currentUser.email)) {
         return "both";
       }
 
@@ -115,7 +160,7 @@ export const useAuth = () => {
   };
 
   const fetchIsContributor = async (currentUser: User, role: UserRole): Promise<boolean> => {
-    if (currentUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) return true;
+    if (isAdminEmail(currentUser.email)) return true;
     if (role === "contributor" || role === "both") return true;
 
     try {
@@ -132,6 +177,18 @@ export const useAuth = () => {
 
     return false;
   };
+
+  const refreshUser = useCallback(async () => {
+    const { data } = await supabase.auth.getUser();
+    if (data?.user) {
+      cachedUser = data.user;
+      const role = await fetchUserRole(data.user);
+      const contributor = await fetchIsContributor(data.user, role);
+      cachedRole = role;
+      cachedIsContributor = contributor;
+      emitAuthCache();
+    }
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -219,14 +276,30 @@ export const useAuth = () => {
   };
 
   const setActiveMode = useCallback((mode: ActiveMode) => {
-    if (mode === "contributor" && !cachedIsContributor) return;
+    if (mode === "contributor") {
+      if (
+        !cachedIsContributor ||
+        !isContributorOnboardingComplete(cachedUser?.user_metadata, cachedUser?.email)
+      ) {
+        openContributorOnboarding();
+        return;
+      }
+    }
     if (cachedActiveMode === mode) return;
     persistActiveMode(mode);
   }, []);
 
   const toggleMode = useCallback(() => {
-    if (!cachedIsContributor) return;
     const next: ActiveMode = cachedActiveMode === "contributor" ? "student" : "contributor";
+    if (next === "contributor") {
+      if (
+        !cachedIsContributor ||
+        !isContributorOnboardingComplete(cachedUser?.user_metadata, cachedUser?.email)
+      ) {
+        openContributorOnboarding();
+        return;
+      }
+    }
     persistActiveMode(next);
     const path = next === "contributor" ? CONTRIBUTOR_HOME : STUDENT_HOME;
     if (navigateImpl) {
@@ -241,6 +314,10 @@ export const useAuth = () => {
     (activeMode === "student" || userRole === "student" || userRole === "both" || userRole === null);
   const canAccessCreator = isContributor;
   const canSwitchModes = isContributor;
+  const hasCompletedCreatorProfile = isContributorOnboardingComplete(
+    user?.user_metadata,
+    user?.email
+  );
 
   return {
     user,
@@ -254,6 +331,8 @@ export const useAuth = () => {
     canAccessStudent,
     canAccessCreator,
     canSwitchModes,
+    hasCompletedCreatorProfile,
+    refreshUser,
     signOut,
   };
 };

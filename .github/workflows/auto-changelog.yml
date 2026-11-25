@@ -1,0 +1,91 @@
+name: Auto-Publish Live Changelog
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  publish-update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Parse commit and post to Supabase platform_updates
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          node -e '
+            const { execSync } = require("child_process");
+            const fs = require("fs");
+
+            const rawSubject = execSync("git log -1 --pretty=%s").toString().trim();
+            const rawBody = execSync("git log -1 --pretty=%b").toString().trim();
+            const authorName = execSync("git log -1 --pretty=%an").toString().trim() || "Eduminity Team";
+            const authorEmail = execSync("git log -1 --pretty=%ae").toString().trim() || null;
+
+            // Skip internal housekeeping commits
+            if (/^(chore|docs|style|refactor|test)(\(.+\))?:/i.test(rawSubject) || /\[skip changelog\]/i.test(rawSubject)) {
+              console.log("Skipping internal commit:", rawSubject);
+              process.exit(0);
+            }
+
+            let type = "release";
+            let badgeLabel = "New Update";
+
+            if (/^fix(\(.+\))?:/i.test(rawSubject)) {
+              type = "fix";
+              badgeLabel = "Bug Fix";
+            } else if (/^feat(\(.+\))?:/i.test(rawSubject)) {
+              type = "feature";
+              badgeLabel = "New Feature";
+            } else if (/^release(\(.+\))?:/i.test(rawSubject)) {
+              type = "release";
+              badgeLabel = "Major Release";
+            }
+
+            const cleanTitle = rawSubject.replace(/^(feat|fix|release)(\(.+\))?:\s*/i, "");
+            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            const baseVersion = (pkg.version || "2.0.0").split(".").slice(0, 2).join(".");
+            const versionTag = `v${baseVersion}.${process.env.RUN_NUMBER}`;
+            const description = rawBody || `Deployed in ${versionTag}: ${cleanTitle}`;
+
+            async function postUpdate() {
+              const res = await fetch(`${process.env.SUPABASE_URL}/rest/v1/platform_updates`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "apikey": process.env.SUPABASE_SERVICE_ROLE_KEY,
+                  "Authorization": `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+                  "Prefer": "return=minimal"
+                },
+                body: JSON.stringify({
+                  type,
+                  version_tag: versionTag,
+                  badge_label: badgeLabel,
+                  title: cleanTitle,
+                  description,
+                  author_name: authorName,
+                  author_email: authorEmail
+                })
+              });
+
+              if (!res.ok) {
+                const errText = await res.text();
+                console.error("Failed to insert changelog:", res.status, errText);
+                process.exit(1);
+              }
+              console.log(`Published ${versionTag}: ${cleanTitle}`);
+            }
+
+            postUpdate();
+          '
