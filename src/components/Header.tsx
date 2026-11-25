@@ -2,7 +2,6 @@ import {
   User,
   Wallet,
   Menu,
-  Settings2,
   LayoutDashboard,
   Sparkles,
   LogOut,
@@ -23,7 +22,11 @@ import { useMode } from "@/contexts/ModeContext";
 import { cn } from "@/lib/utils";
 import { SearchDialog } from "@/components/SearchDialog";
 
-const ADMIN_EMAIL = "business.neurovane@gmail.com";
+const ADMIN_EMAILS = [
+  "business.neurovane@gmail.com",
+  "shariarlabib04@gmail.com",
+  "tanvirshafi9510@gmail.com",
+];
 
 export const Header = () => {
   const { user, canAccessCreator, canSwitchModes, isContributor, activeMode, toggleMode, signOut } = useAuth();
@@ -35,7 +38,9 @@ export const Header = () => {
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   const isCreatorMode = mode === "contributor" && canAccessCreator;
-  const isAdmin = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  const isAdmin = Boolean(
+    user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
+  );
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -91,7 +96,7 @@ export const Header = () => {
               Eduminity
             </span>
             <span className="hidden sm:inline-block text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/30 leading-none">
-              Beta
+              Beta 2.0
             </span>
           </Link>
 
@@ -162,24 +167,7 @@ export const Header = () => {
             </div>
           )}
 
-          {/* Theme Settings (hidden on mobile, moved to drawer) */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigateTo("/app/theme-settings")}
-                className="hidden sm:inline-flex hover:bg-muted dark:hover:shadow-glow-teal transition-all"
-              >
-                <Settings2 className="h-5 w-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Theme Settings</p>
-            </TooltipContent>
-          </Tooltip>
-
-          {/* Theme Toggle (hidden on mobile, moved to drawer) */}
+          {/* Theme Toggle */}
           <div className="hidden sm:block">
             <ThemeToggle />
           </div>
@@ -189,7 +177,7 @@ export const Header = () => {
               {/* Notification Bell */}
               <NotificationBell />
 
-              {/* Creator Earnings shortcut (hidden on mobile, available in menu) */}
+              {/* Creator Earnings shortcut */}
               {canAccessCreator && (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -378,15 +366,9 @@ export const Header = () => {
                   </>
                 )}
 
-                {/* Appearance controls on mobile */}
+                {/* Appearance toggle on mobile */}
                 <div className="border-t border-border my-2 pt-3 flex items-center justify-between px-2">
-                  <button
-                    onClick={() => navigateTo("/app/theme-settings")}
-                    className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-                  >
-                    <Settings2 className="h-4 w-4" />
-                    Theme Settings
-                  </button>
+                  <span className="text-sm font-medium text-muted-foreground">Appearance</span>
                   <ThemeToggle />
                 </div>
 

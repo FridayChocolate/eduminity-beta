@@ -2,10 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
 @layer base {
   :root {
     /* Light Theme - Clean Academic */
@@ -195,17 +191,34 @@ All colors MUST be HSL.
 @layer base {
   * {
     @apply border-border;
+    box-sizing: border-box;
     font-family: inherit;
   }
 
+  html,
+  body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
   html {
-    font-family: var(--font-family, 'Inter', sans-serif);
+    font-family: "Inter", sans-serif;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
     @apply bg-background text-foreground;
     font-family: inherit;
     transition: background-color 0.5s ease, color 0.3s ease;
+  }
+
+  img,
+  video,
+  canvas,
+  svg {
+    max-width: 100%;
   }
 
   h1, h2, h3, h4, h5, h6, p, span, a, button, input, textarea, select, label, div {
@@ -254,7 +267,7 @@ All colors MUST be HSL.
   }
 
   [data-mode="contributor"] .mode-glow {
-    box-shadow: 0 0 30px hsl(var(--creator-primary) / 0.25), 
+    box-shadow: 0 0 30px hsl(var(--creator-primary) / 0.25),
                 0 0 60px hsl(var(--creator-secondary) / 0.15),
                 0 0 90px hsl(var(--creator-tertiary) / 0.1);
   }
@@ -426,7 +439,6 @@ All colors MUST be HSL.
 }
 
 @layer utilities {
-  /* Smooth mode transitions */
   .transition-mode {
     transition: background-color 0.5s ease, border-color 0.5s ease, color 0.3s ease, box-shadow 0.4s ease;
   }
@@ -435,7 +447,6 @@ All colors MUST be HSL.
     transition: all 0.3s ease;
   }
 
-  /* Mode-specific animations */
   [data-mode="student"] .animate-mode-glow {
     animation: pulse-glow-student 2s ease-in-out infinite;
   }
@@ -444,7 +455,6 @@ All colors MUST be HSL.
     animation: pulse-glow-creator 2s ease-in-out infinite;
   }
 
-  /* Premium profile effects */
   .premium-glow {
     position: relative;
   }
@@ -470,7 +480,6 @@ All colors MUST be HSL.
     box-shadow: 0 0 15px hsl(195 100% 50% / 0.4), 0 0 30px hsl(195 100% 50% / 0.2);
   }
 
-  /* Scrollbar hide utility */
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -480,11 +489,10 @@ All colors MUST be HSL.
     display: none;
   }
 
-  /* Profile card styles */
   .profile-card-premium {
-    background: linear-gradient(135deg, 
-      hsl(330 90% 60% / 0.08), 
-      hsl(280 90% 60% / 0.08), 
+    background: linear-gradient(135deg,
+      hsl(330 90% 60% / 0.08),
+      hsl(280 90% 60% / 0.08),
       hsl(260 90% 70% / 0.08)
     );
     border: 1px solid hsl(280 60% 60% / 0.3);
@@ -494,7 +502,6 @@ All colors MUST be HSL.
     border: 1px solid hsl(195 100% 50% / 0.3);
   }
 
-  /* Animated shimmer for loading */
   .shimmer-premium {
     background: linear-gradient(
       90deg,
@@ -510,8 +517,4 @@ All colors MUST be HSL.
     0% { background-position: -200% 0; }
     100% { background-position: 200% 0; }
   }
-}
-html, body {
-  overflow-x: hidden;
-  max-width: 100vw;
 }

@@ -3,13 +3,11 @@ import { Sidebar } from "@/components/Sidebar";
 import { HeroSection } from "@/components/HeroSection";
 import { SocialProofStrip } from "@/components/SocialProofStrip";
 import { TrendingSection } from "@/components/TrendingSection";
-import { SuccessStoryCard } from "@/components/SuccessStoryCard";
 import { MaterialCard } from "@/components/MaterialCard";
-import { LeaderboardCard } from "@/components/LeaderboardCard";
 import { CommunitySection } from "@/components/CommunitySection";
 import { Footer } from "@/components/Footer";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, HelpCircle, Users, Award, Heart, Crown } from "lucide-react";
+import { BookOpen, HelpCircle, Users, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,7 +41,6 @@ const Index = () => {
       if (cancelled) return;
 
       if (error || !data) {
-        console.log(error);
         setStudyMaterials([]);
         setMaterialsLoading(false);
         return;
@@ -53,16 +50,12 @@ const Index = () => {
         ...new Set(data.map((row: any) => row.user_id).filter(Boolean)),
       ] as string[];
 
-      const { data: profiles, error: profilesError } = userIds.length
+      const { data: profiles } = userIds.length
         ? await (supabase as any)
             .from("profiles")
             .select("id, full_name")
             .in("id", userIds)
-        : { data: [], error: null };
-
-      if (profilesError) {
-        console.log(profilesError);
-      }
+        : { data: [] };
 
       if (cancelled) return;
 
@@ -77,7 +70,7 @@ const Index = () => {
         data.map((row: any) => ({
           id: row.id,
           title: row.title || "Untitled Material",
-          author: authorById.get(row.user_id) || "Creator",
+          author: authorById.get(row.user_id) || row.class_level || "Eduminity Creator",
           description: row.description ?? "",
           subject: row.category || row.subject || "General",
           rating: row.rating ?? 5,
@@ -95,12 +88,38 @@ const Index = () => {
   }, []);
 
   const featureCards = [
-    { icon: HelpCircle, title: "Q&A Help", description: "Get expert answers to your academic questions", color: "neon-teal", route: "/app/questions" },
-    { icon: BookOpen, title: "Study Hub", description: "Quick summaries, notes & study guides", color: "neon-violet", route: "/app/materials" },
-    { icon: Users, title: "Community", description: "Connect with students and share knowledge", color: "neon-magenta", route: "/app/community" },
-    { icon: Award, title: "Achievements", description: "Earn badges and climb the leaderboard", color: "yellow-500", route: null },
-    { icon: Heart, title: "Donate", description: "Support students with free study materials", color: "red-500", route: "/app/donate" },
-    { icon: Crown, title: "Premium", description: "Upgrade for ad-free and premium features", color: "purple-500", route: "/app/premium" },
+    {
+      icon: BookOpen,
+      title: "Study Hub",
+      description: "Browse verified lecture notes, guides & past papers",
+      iconClass: "text-teal-400",
+      borderClass: "hover:border-teal-500/50",
+      route: "/app/materials",
+    },
+    {
+      icon: HelpCircle,
+      title: "Q&A Help",
+      description: "Get peer answers to your academic questions",
+      iconClass: "text-indigo-400",
+      borderClass: "hover:border-indigo-500/50",
+      route: "/app/questions",
+    },
+    {
+      icon: Users,
+      title: "Community",
+      description: "Connect with students and share study resources",
+      iconClass: "text-cyan-400",
+      borderClass: "hover:border-cyan-500/50",
+      route: "/app/community",
+    },
+    {
+      icon: Sparkles,
+      title: "Creator Studio",
+      description: "Upload your notes and earn 80% on every sale",
+      iconClass: "text-purple-400",
+      borderClass: "hover:border-purple-500/50",
+      route: "/app/profile",
+    },
   ];
 
   return (
@@ -112,7 +131,7 @@ const Index = () => {
           <Sidebar />
         </div>
 
-        <main className="flex-1 p-3 md:p-6">
+        <main className="flex-1 p-3 md:p-6 min-w-0">
           <ScrollReveal>
             <HeroSection />
           </ScrollReveal>
@@ -125,78 +144,75 @@ const Index = () => {
             <TrendingSection />
           </ScrollReveal>
 
+          {/* Core Working Feature Cards */}
           <ScrollReveal delay={200}>
-            <SuccessStoryCard />
-          </ScrollReveal>
-
-          {/* Feature Cards */}
-          <ScrollReveal delay={250}>
-            <section className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mb-6 md:mb-8">
+            <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
               {featureCards.map((card, index) => (
                 <Card
                   key={index}
-                  className={`cursor-pointer hover:shadow-lg transition-all duration-300 border-border/50 hover:border-${card.color}/50 hover:-translate-y-1 group`}
-                  onClick={() => card.route && navigate(card.route)}
-                  style={{
-                    animationDelay: `${index * 50}ms`,
-                  }}
+                  className={`cursor-pointer hover:shadow-lg transition-all duration-300 border-border/50 ${card.borderClass} hover:-translate-y-1 group`}
+                  onClick={() => navigate(card.route)}
                 >
-                  <CardHeader className="p-3 md:p-6">
-                    <card.icon className={`h-6 w-6 md:h-8 md:w-8 text-${card.color} mb-1 md:mb-2 transition-transform duration-300 group-hover:scale-110`} />
+                  <CardHeader className="p-3.5 md:p-5">
+                    <card.icon
+                      className={`h-6 w-6 md:h-7 md:w-7 ${card.iconClass} mb-1.5 transition-transform duration-300 group-hover:scale-110`}
+                    />
                     <CardTitle className="text-sm md:text-base">{card.title}</CardTitle>
-                    <CardDescription className="text-xs md:text-sm">{card.description}</CardDescription>
+                    <CardDescription className="text-xs">{card.description}</CardDescription>
                   </CardHeader>
                 </Card>
               ))}
             </section>
           </ScrollReveal>
 
-          <div className="flex flex-col lg:flex-row gap-4 md:gap-6">
-            <div className="flex-1">
-              <ScrollReveal>
-                <section id="sheets" className="mb-6 md:mb-8">
-                  <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6 dark:text-neon-teal">Study Materials</h2>
-                  {materialsLoading ? (
-                    <p className="text-sm text-muted-foreground mb-6">Loading study materials...</p>
-                  ) : studyMaterials.length === 0 ? (
-                    <p className="text-sm text-muted-foreground mb-6">No study materials yet.</p>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                      {studyMaterials.map((material, index) => (
-                        <ScrollReveal key={material.id} delay={index * 100}>
-                          <div
-                            onClick={() => navigate(`/app/materials/${material.id}`)}
-                            className="cursor-pointer"
-                          >
-                            <MaterialCard
-                              title={material.title}
-                              author={material.author}
-                              description={material.description}
-                              subject={material.subject}
-                              rating={material.rating}
-                              price={material.price}
-                            />
-                          </div>
-                        </ScrollReveal>
-                      ))}
-                    </div>
-                  )}
-                </section>
-              </ScrollReveal>
+          {/* Latest Study Materials */}
+          <ScrollReveal>
+            <section id="sheets" className="mb-6 md:mb-8">
+              <div className="flex items-center justify-between mb-4 md:mb-6">
+                <h2 className="text-xl md:text-2xl font-bold dark:text-neon-teal">
+                  Latest Study Materials
+                </h2>
+                <button
+                  onClick={() => navigate("/app/materials")}
+                  className="text-xs sm:text-sm font-semibold text-primary hover:underline"
+                >
+                  View All →
+                </button>
+              </div>
 
-              <ScrollReveal>
-                <CommunitySection />
-              </ScrollReveal>
+              {materialsLoading ? (
+                <p className="text-sm text-muted-foreground mb-6">Loading study materials...</p>
+              ) : studyMaterials.length === 0 ? (
+                <p className="text-sm text-muted-foreground mb-6">No study materials yet.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                  {studyMaterials.map((material, index) => (
+                    <ScrollReveal key={material.id} delay={index * 80}>
+                      <div
+                        onClick={() => navigate(`/app/materials/${material.id}`)}
+                        className="cursor-pointer"
+                      >
+                        <MaterialCard
+                          title={material.title}
+                          author={material.author}
+                          description={material.description}
+                          subject={material.subject}
+                          rating={material.rating}
+                          price={material.price}
+                        />
+                      </div>
+                    </ScrollReveal>
+                  ))}
+                </div>
+              )}
+            </section>
+          </ScrollReveal>
 
-              <Footer />
-            </div>
+          <ScrollReveal>
+            <CommunitySection />
+          </ScrollReveal>
 
-            <aside className="hidden xl:block w-80">
-              <ScrollReveal direction="left">
-                <LeaderboardCard />
-              </ScrollReveal>
-            </aside>
-          </div>
+          <Footer />
         </main>
       </div>
     </div>
