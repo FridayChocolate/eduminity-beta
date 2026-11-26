@@ -5,7 +5,7 @@ import { TrendingSection } from "@/components/TrendingSection";
 import { MaterialCard } from "@/components/MaterialCard";
 import { Footer } from "@/components/Footer";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Upload, Sparkles } from "lucide-react";
+import { BookOpen, Upload, Sparkles, LayoutDashboard } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ScrollReveal } from "@/hooks/useScrollReveal";
 import { AppLayout } from "@/layouts/AppLayout";
@@ -50,6 +50,14 @@ const AppHome = () => {
 
   const featureCards = [
     {
+      icon: LayoutDashboard,
+      title: "My Dashboard",
+      description: "Access unlocked PDFs, payment status, earnings & uploads",
+      iconClass: "text-cyan-400",
+      borderClass: "hover:border-cyan-500/50",
+      route: ROUTES.DASHBOARD,
+    },
+    {
       icon: BookOpen,
       title: "Study Hub",
       description: "Browse verified lecture notes, guides & past papers",
@@ -67,8 +75,8 @@ const AppHome = () => {
     },
     {
       icon: Sparkles,
-      title: "Profile & Creator Studio",
-      description: "Manage your Proof Vault, XP badges, cover banner & payouts",
+      title: "Profile & Trophy Room",
+      description: "Customize your cover banner, Proof Vault & XP badges",
       iconClass: "text-purple-400",
       borderClass: "hover:border-purple-500/50",
       route: ROUTES.PROFILE,
@@ -89,20 +97,20 @@ const AppHome = () => {
         <TrendingSection />
       </ScrollReveal>
 
-      {/* 3 Core Working Pillars */}
+      {/* 4 Core Working Pillars */}
       <ScrollReveal delay={200}>
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-8">
           {featureCards.map((card, index) => (
             <Card
               key={index}
               className={`cursor-pointer hover:shadow-lg transition-all duration-300 border-border/50 ${card.borderClass} hover:-translate-y-1 group`}
               onClick={() => navigate(card.route)}
             >
-              <CardHeader className="p-5">
+              <CardHeader className="p-4 md:p-5">
                 <card.icon
-                  className={`h-7 w-7 ${card.iconClass} mb-2 transition-transform duration-300 group-hover:scale-110`}
+                  className={`h-6 w-6 md:h-7 md:w-7 ${card.iconClass} mb-2 transition-transform duration-300 group-hover:scale-110`}
                 />
-                <CardTitle className="text-base">{card.title}</CardTitle>
+                <CardTitle className="text-sm md:text-base">{card.title}</CardTitle>
                 <CardDescription className="text-xs">{card.description}</CardDescription>
               </CardHeader>
             </Card>

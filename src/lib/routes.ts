@@ -2,6 +2,7 @@ export const ROUTES = {
     LANDING: "/",
     AUTH: "/auth",
     APP: "/app",
+    DASHBOARD: "/app/dashboard",
     MATERIALS: "/app/materials",
     materialDetail: (id: string) => `/app/material/${id}`,
     UPLOAD_NOTES: "/app/upload-notes",

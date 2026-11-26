@@ -7,6 +7,7 @@ import {
   ArrowLeftRight,
   ExternalLink,
   Upload,
+  LayoutDashboard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
@@ -113,6 +114,15 @@ export const Header = () => {
             >
               Home
             </button>
+            {user && (
+              <button
+                type="button"
+                onClick={() => navigateTo(ROUTES.DASHBOARD)}
+                className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+              >
+                Dashboard
+              </button>
+            )}
             <button
               type="button"
               onClick={() => navigateTo(ROUTES.MATERIALS)}
@@ -184,11 +194,20 @@ export const Header = () => {
 
                     <button
                       type="button"
+                      onClick={() => navigateTo(ROUTES.DASHBOARD)}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-white/10 text-left transition-colors"
+                    >
+                      <LayoutDashboard className="h-4 w-4 text-cyan-400" />
+                      My Dashboard
+                    </button>
+
+                    <button
+                      type="button"
                       onClick={() => navigateTo(ROUTES.PROFILE)}
                       className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-white/10 text-left transition-colors"
                     >
                       <Sparkles className="h-4 w-4 text-purple-400" />
-                      Profile &amp; Creator Studio
+                      Profile &amp; Trophy Room
                     </button>
 
                     {canAccessCreator && (
@@ -286,6 +305,15 @@ export const Header = () => {
                 >
                   Home
                 </button>
+                {user && (
+                  <button
+                    type="button"
+                    onClick={() => navigateTo(ROUTES.DASHBOARD)}
+                    className="text-left text-base font-medium p-2 rounded-md hover:bg-muted"
+                  >
+                    Dashboard
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => navigateTo(ROUTES.MATERIALS)}
@@ -327,7 +355,7 @@ export const Header = () => {
                       onClick={() => navigateTo(ROUTES.PROFILE)}
                       className="text-left text-base font-medium p-2 rounded-md hover:bg-muted"
                     >
-                      Profile &amp; Creator Studio
+                      Profile &amp; Trophy Room
                     </button>
                     {isAdmin && (
                       <button

@@ -25,6 +25,7 @@ import Ak47EasterEgg from "@/pages/Ak47EasterEgg";
 
 // Core App pages
 import AppHome from "./pages/app/AppHome";
+import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import StudyMaterials from "./pages/StudyMaterials";
 import MaterialDetails from "./pages/MaterialDetails";
@@ -81,6 +82,7 @@ const App = () => (
 
                 {/* Core Protected App Routes */}
                 <Route path="/app" element={<ProtectedRoute><AppHome /></ProtectedRoute>} />
+                <Route path="/app/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/app/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                 <Route path="/app/materials" element={<ProtectedRoute><StudyMaterials /></ProtectedRoute>} />
                 <Route path="/app/material/:id" element={<ProtectedRoute><MaterialDetails /></ProtectedRoute>} />
@@ -94,36 +96,36 @@ const App = () => (
                 <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
 
                 {/* Clean Redirects for Retired & Legacy URLs */}
-                <Route path="/app/student-dashboard" element={<Navigate to="/app" replace />} />
-                <Route path="/app/creator-studio" element={<Navigate to="/app/profile" replace />} />
-                <Route path="/app/my-uploads" element={<Navigate to="/app/profile" replace />} />
-                <Route path="/app/creator-analytics" element={<Navigate to="/app/profile" replace />} />
-                <Route path="/app/creator-reviews" element={<Navigate to="/app/profile" replace />} />
-                <Route path="/app/creator-earnings" element={<Navigate to="/app/profile" replace />} />
-                <Route path="/app/withdraw" element={<Navigate to="/app/profile" replace />} />
-                <Route path="/app/help-requests" element={<Navigate to="/app/profile" replace />} />
-                <Route path="/app/creator-:path" element={<Navigate to="/app/profile" replace />} />
+                <Route path="/app/student-dashboard" element={<Navigate to="/app/dashboard" replace />} />
+                <Route path="/app/creator-studio" element={<Navigate to="/app/dashboard" replace />} />
+                <Route path="/app/my-uploads" element={<Navigate to="/app/dashboard" replace />} />
+                <Route path="/app/creator-analytics" element={<Navigate to="/app/dashboard" replace />} />
+                <Route path="/app/creator-reviews" element={<Navigate to="/app/dashboard" replace />} />
+                <Route path="/app/creator-earnings" element={<Navigate to="/app/dashboard" replace />} />
+                <Route path="/app/withdraw" element={<Navigate to="/app/dashboard" replace />} />
+                <Route path="/app/help-requests" element={<Navigate to="/app/dashboard" replace />} />
+                <Route path="/app/creator-:path" element={<Navigate to="/app/dashboard" replace />} />
                 <Route path="/app/questions" element={<Navigate to="/app/materials" replace />} />
                 <Route path="/app/community" element={<Navigate to="/app/updates" replace />} />
                 <Route path="/app/community/*" element={<Navigate to="/app/updates" replace />} />
-                <Route path="/app/wallet" element={<Navigate to="/app/profile" replace />} />
+                <Route path="/app/wallet" element={<Navigate to="/app/dashboard" replace />} />
                 <Route path="/upload-material" element={<Navigate to="/app/upload-notes" replace />} />
+                <Route path="/upload-notes" element={<Navigate to="/app/upload-notes" replace />} />
                 <Route path="/app/upload" element={<Navigate to="/app/upload-notes" replace />} />
                 <Route path="/app/student-profile" element={<Navigate to="/app/profile" replace />} />
-                <Route path="/app/dashboard" element={<Navigate to="/app" replace />} />
                 <Route path="/app/payment" element={<Navigate to="/app/materials" replace />} />
                 <Route path="/app/premium" element={<Navigate to="/app" replace />} />
                 <Route path="/app/donate" element={<Navigate to="/app" replace />} />
                 <Route path="/app/write" element={<Navigate to="/app/upload-notes" replace />} />
                 <Route path="/app/theme-settings" element={<Navigate to="/app/profile" replace />} />
                 <Route path="/profile" element={<Navigate to="/app/profile" replace />} />
-                <Route path="/dashboard" element={<Navigate to="/app" replace />} />
-                <Route path="/student-dashboard" element={<Navigate to="/app" replace />} />
-                <Route path="/creator-studio" element={<Navigate to="/app/profile" replace />} />
+                <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
+                <Route path="/student-dashboard" element={<Navigate to="/app/dashboard" replace />} />
+                <Route path="/creator-studio" element={<Navigate to="/app/dashboard" replace />} />
                 <Route path="/questions" element={<Navigate to="/app/materials" replace />} />
                 <Route path="/materials" element={<Navigate to="/app/materials" replace />} />
                 <Route path="/materials/:id" element={<ProtectedRoute><MaterialDetails /></ProtectedRoute>} />
-                <Route path="/wallet" element={<Navigate to="/app/profile" replace />} />
+                <Route path="/wallet" element={<Navigate to="/app/dashboard" replace />} />
 
                 {/* Catch-all */}
                 <Route path="*" element={<NotFound />} />
