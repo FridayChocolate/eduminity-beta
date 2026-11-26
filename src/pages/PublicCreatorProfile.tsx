@@ -41,6 +41,7 @@ import {
   AchievementBadge,
   BadgeRarity,
 } from "@/lib/gamification";
+import { InteractiveCoverBanner } from "@/components/InteractiveCoverBanner";
 
 const RARITY_STYLES: Record<BadgeRarity, string> = {
   common: "border-slate-500/40 bg-slate-500/10 text-slate-200",
@@ -286,29 +287,20 @@ export default function PublicCreatorProfile() {
             animate={{ opacity: 1, y: 0 }}
             className="rounded-3xl border border-border/60 bg-card overflow-hidden shadow-2xl"
           >
-            {/* Cover Banner */}
-            <div
-              className={`h-44 sm:h-56 w-full relative ${
-                !customBannerUrl ? selectedBanner.className : "bg-slate-900"
-              }`}
-              style={
-                customBannerUrl
-                  ? {
-                      backgroundImage: `url(${customBannerUrl})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                    }
-                  : undefined
-              }
-            >
-              <div className="absolute inset-0 bg-gradient-to-t from-card via-card/30 to-transparent" />
-              <div className="absolute top-4 right-4 flex items-center gap-2">
+            <InteractiveCoverBanner
+              customBannerUrl={customBannerUrl}
+              presetClassName={selectedBanner.className}
+              posX={profileRecord.banner_pos_x ?? 50}
+              posY={profileRecord.banner_pos_y ?? 35}
+              zoom={profileRecord.banner_zoom ?? 1}
+              heightClass="h-44 sm:h-56"
+              topRightSlot={
                 <Badge className="bg-black/65 backdrop-blur-md text-white border-white/15 px-3 py-1">
                   <Sparkles className="h-3.5 w-3.5 mr-1.5 text-teal-400" />
                   Level {gamification.levelInfo.level} • {gamification.levelInfo.xp} XP
                 </Badge>
-              </div>
-            </div>
+              }
+            />
 
             {/* Creator Identity & Metrics */}
             <div className="px-6 pb-6 -mt-14 relative">

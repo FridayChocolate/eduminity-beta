@@ -2,7 +2,20 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Copy, Check, Star, Trash2, MessageSquare } from "lucide-react";
+import {
+  Copy,
+  Check,
+  Star,
+  Trash2,
+  MessageSquare,
+  BadgeCheck,
+  ShieldCheck,
+  FileCheck2,
+  GraduationCap,
+  Crown,
+  ExternalLink,
+} from "lucide-react";
+import { computeProfileGamification } from "@/lib/gamification";
 
 type PaymentProviderKey = "bkash" | "nagad" | "rocket";
 
@@ -98,6 +111,8 @@ export default function MaterialDetails() {
   const navigate = useNavigate();
 
   const [material, setMaterial] = useState<any>(null);
+  const [creatorProfile, setCreatorProfile] = useState<any | null>(null);
+  const [creatorNotesCount, setCreatorNotesCount] = useState<number>(1);
   const [loading, setLoading] = useState(true);
   const [purchaseStatus, setPurchaseStatus] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -160,7 +175,28 @@ export default function MaterialDetails() {
         .single();
 
       if (matError) throw matError;
-      setMaterial(matData);
+      const matRecord = matData as any;
+      setMaterial(matRecord);
+
+      // Fetch Creator Profile & Published Notes Count for Trust Card
+      if (matRecord?.user_id) {
+        const [profRes, countRes] = await Promise.all([
+          (supabase as any)
+            .from("profiles")
+            .select("*")
+            .eq("id", matRecord.user_id)
+            .maybeSingle(),
+          (supabase as any)
+            .from("materials")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", matRecord.user_id),
+        ]);
+
+        if (profRes.data) setCreatorProfile(profRes.data);
+        if (typeof countRes.count === "number") {
+          setCreatorNotesCount(Math.max(1, countRes.count));
+        }
+      }
 
       const {
         data: { user },
@@ -255,7 +291,10 @@ export default function MaterialDetails() {
   };
 
   const getPreviewPaths = (): string[] => {
-    if (Array.isArray(material?.preview_image_paths) && material.preview_image_paths.length > 0) {
+    if (
+      Array.isArray(material?.preview_image_paths) &&
+      material.preview_image_paths.length > 0
+    ) {
       return material.preview_image_paths;
     }
     if (material?.preview_image_path) {
@@ -380,7 +419,7 @@ export default function MaterialDetails() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#12121A] flex justify-center items-center">
-        <div className="w-8 h-8 border-4 border-teal-400 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-teal-400 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -398,9 +437,34 @@ export default function MaterialDetails() {
       ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
       : null;
 
+  const creatorName = creatorProfile?.full_name?.trim() || "Eduminity Creator";
+  const creatorVerified =
+    creatorProfile?.verification_status === "verified" ||
+    Boolean(creatorProfile?.has_id_proof || creatorProfile?.has_merit_proof);
+
+  const creatorGamification = computeProfileGamification({
+    meta: {
+      ...(creatorProfile || {}),
+      student_id_card_url:
+        creatorProfile?.student_id_card_url ||
+        (creatorProfile?.has_id_proof ? "verified" : ""),
+      academic_proof_url:
+        creatorProfile?.academic_proof_url ||
+        (creatorProfile?.has_merit_proof ? "verified" : ""),
+    },
+    email: creatorProfile?.email,
+    publishedMaterials: Array.from({ length: creatorNotesCount }, (_, idx) => ({
+      id: `m-${idx}`,
+    })),
+    salesRows: [],
+    unlockedPurchases: [],
+    reviewsWrittenCount: 0,
+    averageRating: averageRating ? Number(averageRating) : 5.0,
+  });
+
   return (
     <div className="min-h-screen bg-[#12121A] text-white p-4 sm:p-6 md:p-12 font-['Inter'] relative overflow-hidden">
-      <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none"></div>
+      <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="max-w-4xl mx-auto relative z-10 space-y-6 md:space-y-8">
         <div className="relative z-50">
@@ -444,8 +508,112 @@ export default function MaterialDetails() {
               </h1>
 
               <div className="prose prose-invert max-w-none text-gray-300 mb-6 md:mb-8 text-sm sm:text-base">
-                <p className="whitespace-pre-wrap leading-relaxed">{material.description}</p>
+                <p className="whitespace-pre-wrap leading-relaxed">
+                  {material.description}
+                </p>
               </div>
+
+              {/* CREATOR TRUST & PROOF VAULT CARD */}
+              {material.user_id && (
+                <div className="rounded-2xl bg-[#12121A]/90 border border-white/10 p-4 sm:p-5 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div
+                      onClick={() => navigate(`/creator/${material.user_id}`)}
+                      className="flex items-center gap-3.5 cursor-pointer group"
+                    >
+                      <div
+                        className={`h-12 w-12 rounded-xl bg-gradient-to-br from-purple-600 to-teal-500 flex items-center justify-center text-base font-bold text-white overflow-hidden shrink-0 ${creatorGamification.levelInfo.avatarFrame.ringClass}`}
+                      >
+                        {creatorProfile?.avatar_url ? (
+                          <img
+                            src={creatorProfile.avatar_url}
+                            alt={creatorName}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          creatorName.charAt(0).toUpperCase()
+                        )}
+                      </div>
+
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-bold text-sm sm:text-base text-white group-hover:text-teal-300 transition-colors">
+                            {creatorName}
+                          </span>
+
+                          {creatorVerified && (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-300 border border-teal-500/35">
+                              <BadgeCheck className="h-3.5 w-3.5 text-teal-400" />
+                              Verified Credentials
+                            </span>
+                          )}
+
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                            <Crown className="h-3 w-3 text-amber-400" />
+                            Lv.{creatorGamification.levelInfo.level} •{" "}
+                            {creatorGamification.levelInfo.title}
+                          </span>
+                        </div>
+
+                        <p className="text-xs text-gray-400 mt-1 flex flex-wrap items-center gap-2">
+                          {creatorProfile?.institution ? (
+                            <span className="inline-flex items-center gap-1">
+                              <GraduationCap className="h-3.5 w-3.5 text-gray-500" />
+                              {creatorProfile.institution}
+                            </span>
+                          ) : (
+                            <span>Eduminity Verified Contributor</span>
+                          )}
+                          {creatorProfile?.department && (
+                            <span>• {creatorProfile.department}</span>
+                          )}
+                          {creatorProfile?.cgpa && (
+                            <span className="text-teal-300 font-medium">
+                              • CGPA {creatorProfile.cgpa}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate(`/creator/${material.user_id}`)}
+                      className="border-teal-500/35 text-teal-300 hover:bg-teal-500/10 text-xs shrink-0 self-start sm:self-center"
+                    >
+                      View Showcase
+                      <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
+                    </Button>
+                  </div>
+
+                  {/* Verified Proof Chips */}
+                  {(creatorProfile?.has_id_proof ||
+                    creatorProfile?.has_merit_proof ||
+                    creatorProfile?.honors) && (
+                    <div className="pt-2.5 border-t border-white/10 flex flex-wrap items-center gap-2">
+                      {creatorProfile?.has_id_proof && (
+                        <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg bg-purple-500/10 border border-purple-500/25 text-purple-300">
+                          <ShieldCheck className="h-3.5 w-3.5" />
+                          Student ID Verified
+                        </span>
+                      )}
+                      {creatorProfile?.has_merit_proof && (
+                        <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg bg-teal-500/10 border border-teal-500/25 text-teal-300">
+                          <FileCheck2 className="h-3.5 w-3.5" />
+                          Merit Sheet Verified
+                        </span>
+                      )}
+                      {creatorProfile?.honors && (
+                        <span className="text-[11px] px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-300">
+                          {creatorProfile.honors}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Right Column: Locked Checkout Panel */}
@@ -470,12 +638,30 @@ export default function MaterialDetails() {
                 </Button>
 
                 {isOwner ? (
-                  <Button
-                    onClick={handleDownload}
-                    className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold h-14 rounded-xl transition-all"
-                  >
-                    Your Upload — Download
-                  </Button>
+                  <>
+                    <Button
+                      onClick={handleDownload}
+                      className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold h-12 rounded-xl transition-all"
+                    >
+                      Your Upload — Download
+                    </Button>
+                    {!isFree &&
+                      (isPending ? (
+                        <Button
+                          disabled
+                          className="w-full bg-amber-500/20 border border-amber-500/40 text-amber-300 font-semibold h-11 rounded-xl cursor-not-allowed text-xs"
+                        >
+                          Test Purchase Awaiting Admin
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={handleOpenPayment}
+                          className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold h-12 rounded-xl shadow-[0_0_20px_rgba(99,102,241,0.3)] transition-all hover:scale-[1.02]"
+                        >
+                          Buy Now (Test Checkout)
+                        </Button>
+                      ))}
+                  </>
                 ) : isFree || isApproved ? (
                   <Button
                     onClick={handleDownload}
@@ -762,7 +948,11 @@ export default function MaterialDetails() {
                     className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
                     title="Copy number"
                   >
-                    {copied ? <Check className="h-4 w-4 text-teal-400" /> : <Copy className="h-4 w-4" />}
+                    {copied ? (
+                      <Check className="h-4 w-4 text-teal-400" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
                   </button>
                 )}
               </div>

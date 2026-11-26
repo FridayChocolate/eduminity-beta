@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import confetti from "canvas-confetti";
 import { useAuth, openContributorOnboarding } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -44,6 +43,11 @@ import {
   Calculator,
   BadgeCheck,
   ArrowRight,
+  Copy,
+  Check,
+  Share2,
+  Banknote,
+  Clock,
 } from "lucide-react";
 import {
   BANNER_PRESETS,
@@ -54,6 +58,7 @@ import {
   isAdminEmail,
 } from "@/lib/gamification";
 import { uploadProfileAsset } from "@/lib/profileMedia";
+import { InteractiveCoverBanner } from "@/components/InteractiveCoverBanner";
 
 type HubTab = "showcase" | "achievements" | "banners" | "details";
 
@@ -111,16 +116,20 @@ export default function Profile() {
   const { toast } = useToast();
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
-  // Sliding view between Student Mode and Creator Mode (always available!)
   const [profileRoleView, setProfileRoleView] = useState<"student" | "contributor">(
     activeMode === "contributor" ? "contributor" : "student"
   );
   const [activeTab, setActiveTab] = useState<HubTab>("showcase");
 
-  // Media URLs
+  // Media URLs & Facebook-style Cover Framing
   const [avatarUrl, setAvatarUrl] = useState<string>("");
   const [selectedBannerId, setSelectedBannerId] = useState("academic-slate");
   const [customBannerUrl, setCustomBannerUrl] = useState<string | null>(null);
+  const [bannerPosX, setBannerPosX] = useState<number>(50);
+  const [bannerPosY, setBannerPosY] = useState<number>(35);
+  const [bannerZoom, setBannerZoom] = useState<number>(1);
+  const [repositionTrigger, setRepositionTrigger] = useState<number>(0);
+
   const [idCardUrl, setIdCardUrl] = useState<string>("");
   const [meritProofUrl, setMeritProofUrl] = useState<string>("");
 
@@ -146,7 +155,16 @@ export default function Profile() {
   const [expertise, setExpertise] = useState("");
   const [payoutNumber, setPayoutNumber] = useState("");
 
-  // Interactive Royalty Calculator (shown when sliding to Creator before initiation)
+  // Showcase Share Link & Payout Request Drawer State
+  const [copiedShowcase, setCopiedShowcase] = useState(false);
+  const [showPayoutForm, setShowPayoutForm] = useState(false);
+  const [payoutMethod, setPayoutMethod] = useState<"bkash" | "nagad" | "rocket">("bkash");
+  const [payoutAccountInput, setPayoutAccountInput] = useState("");
+  const [payoutAmountInput, setPayoutAmountInput] = useState("");
+  const [submittingPayout, setSubmittingPayout] = useState(false);
+  const [withdrawalRows, setWithdrawalRows] = useState<any[]>([]);
+
+  // Interactive Royalty Calculator
   const [simPrice, setSimPrice] = useState(120);
   const [simBuyers, setSimBuyers] = useState(25);
 
@@ -185,8 +203,12 @@ export default function Profile() {
     setCreatorTagline(meta.creator_tagline || "");
     setExpertise(meta.expertise || "");
     setPayoutNumber(meta.payout_number || "");
+    setPayoutAccountInput(meta.payout_number || "");
     setSelectedBannerId(meta.banner_preset || "academic-slate");
     setCustomBannerUrl(meta.custom_banner_url || null);
+    setBannerPosX(typeof meta.banner_pos_x === "number" ? meta.banner_pos_x : 50);
+    setBannerPosY(typeof meta.banner_pos_y === "number" ? meta.banner_pos_y : 35);
+    setBannerZoom(typeof meta.banner_zoom === "number" ? meta.banner_zoom : 1);
     setIdCardUrl(meta.student_id_card_url || "");
     setMeritProofUrl(meta.academic_proof_url || "");
 
@@ -195,25 +217,32 @@ export default function Profile() {
     const fetchGamificationData = async () => {
       setLoadingStats(true);
       try {
-        const [materialsRes, myPurchasesRes, myReviewsRes] = await Promise.all([
-          (supabase as any)
-            .from("materials")
-            .select("*")
-            .eq("user_id", user.id)
-            .order("created_at", { ascending: false }),
-          (supabase as any)
-            .from("purchases")
-            .select("*")
-            .eq("user_id", user.id)
-            .order("created_at", { ascending: false }),
-          (supabase as any)
-            .from("material_reviews")
-            .select("id", { count: "exact", head: true })
-            .eq("user_id", user.id),
-        ]);
+        const [materialsRes, myPurchasesRes, myReviewsRes, myWithdrawalsRes] =
+          await Promise.all([
+            (supabase as any)
+              .from("materials")
+              .select("*")
+              .eq("user_id", user.id)
+              .order("created_at", { ascending: false }),
+            (supabase as any)
+              .from("purchases")
+              .select("*")
+              .eq("user_id", user.id)
+              .order("created_at", { ascending: false }),
+            (supabase as any)
+              .from("material_reviews")
+              .select("id", { count: "exact", head: true })
+              .eq("user_id", user.id),
+            (supabase as any)
+              .from("withdrawals")
+              .select("*")
+              .eq("user_id", user.id)
+              .order("created_at", { ascending: false }),
+          ]);
 
         const myMaterials = materialsRes.data || [];
         const myPurchases = myPurchasesRes.data || [];
+        const myWithdrawals = myWithdrawalsRes.data || [];
         const myMatIds = myMaterials.map((m: any) => m.id);
 
         let mySales: any[] = [];
@@ -295,6 +324,7 @@ export default function Profile() {
         setPublishedMaterials(myMaterials);
         setSalesRows(mySales);
         setUnlockedPurchases(myPurchases);
+        setWithdrawalRows(myWithdrawals);
         setLatestBuyouts(buyoutFeed.slice(0, 6));
         setReviewsWrittenCount(myReviewsRes.count || 0);
         setAverageRating(avg);
@@ -328,6 +358,9 @@ export default function Profile() {
     payout_number: payoutNumber,
     banner_preset: selectedBannerId,
     custom_banner_url: customBannerUrl,
+    banner_pos_x: bannerPosX,
+    banner_pos_y: bannerPosY,
+    banner_zoom: bannerZoom,
     student_id_card_url: idCardUrl,
     academic_proof_url: meritProofUrl,
   };
@@ -341,6 +374,128 @@ export default function Profile() {
     reviewsWrittenCount,
     averageRating,
   });
+
+  // Wallet & Withdrawal Calculations
+  const escrowCredits = withdrawalRows
+    .filter((w) => w.payment_method === "wallet" && w.status === "available")
+    .reduce((sum, w) => sum + Number(w.amount || 0), 0);
+
+  const lifetimeNetEarnings = Math.max(
+    gamification.totalCreatorEarnings,
+    escrowCredits
+  );
+
+  const payoutRequests = withdrawalRows.filter((w) => w.payment_method !== "wallet");
+
+  const pendingPayoutAmount = payoutRequests
+    .filter((w) => w.status === "pending")
+    .reduce((sum, w) => sum + Number(w.amount || 0), 0);
+
+  const paidPayoutAmount = payoutRequests
+    .filter((w) => w.status === "approved")
+    .reduce((sum, w) => sum + Number(w.amount || 0), 0);
+
+  const availableWithdrawBalance = Math.max(
+    0,
+    lifetimeNetEarnings - pendingPayoutAmount - paidPayoutAmount
+  );
+
+  const showcaseShareUrl = user?.id
+    ? `${window.location.origin}/creator/${user.id}`
+    : "";
+
+  const handleCopyShowcaseLink = async () => {
+    if (!showcaseShareUrl) return;
+    try {
+      await navigator.clipboard.writeText(showcaseShareUrl);
+      setCopiedShowcase(true);
+      toast({
+        title: "Showcase link copied!",
+        description: "Paste it into your university Messenger, WhatsApp, or Facebook groups.",
+      });
+      setTimeout(() => setCopiedShowcase(false), 2500);
+    } catch {
+      toast({
+        title: "Could not copy link",
+        description: showcaseShareUrl,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRequestPayout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    const cleanAccount = payoutAccountInput.trim();
+    const numericAmount = Math.floor(Number(payoutAmountInput));
+
+    if (!cleanAccount || cleanAccount.length < 11) {
+      toast({
+        title: "Invalid phone number",
+        description: "Enter a valid 11-digit bKash, Nagad, or Rocket number.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!numericAmount || numericAmount < 50) {
+      toast({
+        title: "Minimum withdrawal is ৳50",
+        description: "Enter an amount of at least ৳50.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (numericAmount > availableWithdrawBalance) {
+      toast({
+        title: "Insufficient available balance",
+        description: `You can withdraw up to ৳${availableWithdrawBalance}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSubmittingPayout(true);
+    try {
+      const { data: insertedRow, error } = await (supabase as any)
+        .from("withdrawals")
+        .insert({
+          user_id: user.id,
+          amount: numericAmount,
+          status: "pending",
+          payment_method: payoutMethod,
+          account_number: cleanAccount,
+        })
+        .select("*")
+        .single();
+
+      if (error) throw error;
+
+      if (!payoutNumber) {
+        setPayoutNumber(cleanAccount);
+        await syncProfileUpdate({ payout_number: cleanAccount });
+      }
+
+      setWithdrawalRows((prev) => [insertedRow, ...prev]);
+      setShowPayoutForm(false);
+      setPayoutAmountInput("");
+
+      toast({
+        title: "Payout Request Submitted!",
+        description: `৳${numericAmount} via ${payoutMethod.toUpperCase()} sent to Admin Payout Queue.`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Payout request failed",
+        description: err.message || "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmittingPayout(false);
+    }
+  };
 
   const syncProfileUpdate = async (extraData: Record<string, any> = {}) => {
     if (!user) return;
@@ -360,6 +515,9 @@ export default function Profile() {
       payout_number: payoutNumber.trim(),
       banner_preset: selectedBannerId,
       custom_banner_url: customBannerUrl,
+      banner_pos_x: bannerPosX,
+      banner_pos_y: bannerPosY,
+      banner_zoom: bannerZoom,
       student_id_card_url: idCardUrl,
       academic_proof_url: meritProofUrl,
       ...extraData,
@@ -382,6 +540,16 @@ export default function Profile() {
         bio: merged.bio,
         banner_preset: merged.banner_preset,
         custom_banner_url: merged.custom_banner_url,
+        banner_pos_x: merged.banner_pos_x,
+        banner_pos_y: merged.banner_pos_y,
+        banner_zoom: merged.banner_zoom,
+        student_id: merged.student_id,
+        student_id_card_url: merged.student_id_card_url || null,
+        academic_proof_url: merged.academic_proof_url || null,
+        verification_status:
+          merged.student_id_card_url || merged.academic_proof_url
+            ? "pending"
+            : "unsubmitted",
         has_id_proof: Boolean(merged.student_id_card_url),
         has_merit_proof: Boolean(merged.academic_proof_url),
       });
@@ -434,14 +602,14 @@ export default function Profile() {
         await syncProfileUpdate({ student_id_card_url: publicUrl });
         toast({
           title: "University ID Card Attached!",
-          description: "+50 XP earned toward your Authenticated Creator badge.",
+          description: "+50 XP earned and sent to Admin Verification Queue.",
         });
       } else {
         setMeritProofUrl(publicUrl);
         await syncProfileUpdate({ academic_proof_url: publicUrl });
         toast({
           title: "Academic Merit Proof Attached!",
-          description: "+50 XP earned! Your Creator Proof Score just increased.",
+          description: "+50 XP earned! Sent to Admin Verification Queue.",
         });
       }
     } catch (err: any) {
@@ -496,9 +664,8 @@ export default function Profile() {
     }
   };
 
-  const handleCustomBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
+  const handleBannerFileSelected = async (file: File) => {
+    if (!user) return;
 
     if (!gamification.levelInfo.canUploadCustomBanner) {
       toast({
@@ -513,12 +680,23 @@ export default function Profile() {
     try {
       const publicUrl = await uploadProfileAsset(user.id, "banners", file);
       setCustomBannerUrl(publicUrl);
-      await syncProfileUpdate({ custom_banner_url: publicUrl });
+      setBannerPosX(50);
+      setBannerPosY(35);
+      setBannerZoom(1);
 
-      confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } });
+      await syncProfileUpdate({
+        custom_banner_url: publicUrl,
+        banner_pos_x: 50,
+        banner_pos_y: 35,
+        banner_zoom: 1,
+      });
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      setRepositionTrigger((n) => n + 1);
+
       toast({
-        title: "Custom Cover Banner Live!",
-        description: "Your custom artwork has been uploaded and equipped.",
+        title: "Cover uploaded!",
+        description: "Drag the banner to position it and click Save Cover.",
       });
     } catch (err: any) {
       toast({
@@ -579,19 +757,15 @@ export default function Profile() {
             variant="ghost"
             size="sm"
             onClick={() =>
-              navigate(
-                activeMode === "contributor"
-                  ? "/app/creator-studio"
-                  : "/app/student-dashboard"
-              )
+              navigate(activeMode === "contributor" ? "/app" : "/app/student-dashboard")
             }
             className="gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
-            {activeMode === "contributor" ? "Creator Studio" : "Dashboard"}
+            {activeMode === "contributor" ? "Back to Portal" : "Dashboard"}
           </Button>
 
-          {/* Animated Sliding Mode Pill (Always available so students can preview Creator Mode!) */}
+          {/* Animated Sliding Mode Pill */}
           <div className="relative inline-flex rounded-2xl bg-muted/70 p-1 border border-border/80 shadow-inner">
             <button
               type="button"
@@ -673,42 +847,50 @@ export default function Profile() {
           transition={{ duration: 0.45 }}
         >
           <Card className="bg-card/90 backdrop-blur-xl border-border/80 overflow-hidden shadow-2xl">
-            {/* Cover Banner */}
-            <div
-              className={`h-44 sm:h-52 w-full relative transition-all duration-700 ${
-                !customBannerUrl ? activePreset.className : "bg-slate-900"
-              }`}
-              style={
-                customBannerUrl
-                  ? {
-                      backgroundImage: `url(${customBannerUrl})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                    }
-                  : undefined
+            <InteractiveCoverBanner
+              customBannerUrl={customBannerUrl}
+              presetClassName={activePreset.className}
+              posX={bannerPosX}
+              posY={bannerPosY}
+              zoom={bannerZoom}
+              heightClass="h-44 sm:h-52"
+              editable
+              canUploadCustom={gamification.levelInfo.canUploadCustomBanner}
+              uploading={uploadingBanner}
+              autoRepositionTrigger={repositionTrigger}
+              onUploadFile={handleBannerFileSelected}
+              onSaveFraming={async ({ posX, posY, zoom }) => {
+                setBannerPosX(posX);
+                setBannerPosY(posY);
+                setBannerZoom(zoom);
+                await syncProfileUpdate({
+                  banner_pos_x: posX,
+                  banner_pos_y: posY,
+                  banner_zoom: zoom,
+                });
+                toast({ title: "Cover position saved!" });
+              }}
+              topRightSlot={
+                <>
+                  <Badge className="bg-black/65 backdrop-blur-md text-white border-white/15 px-3 py-1 text-xs shadow-lg">
+                    <Crown className="h-3.5 w-3.5 mr-1.5 text-amber-400" />
+                    Level {gamification.levelInfo.level} • {gamification.levelInfo.title}
+                  </Badge>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      setProfileRoleView("student");
+                      setActiveTab("banners");
+                    }}
+                    className="h-7 px-2.5 text-xs bg-black/65 hover:bg-black/85 text-white border border-white/15 backdrop-blur-md"
+                  >
+                    <ImageIcon className="h-3.5 w-3.5 mr-1" />
+                    Presets
+                  </Button>
+                </>
               }
-            >
-              <div className="absolute inset-0 bg-gradient-to-t from-card via-card/30 to-transparent" />
-
-              <div className="absolute top-3.5 right-3.5 flex items-center gap-2">
-                <Badge className="bg-black/65 backdrop-blur-md text-white border-white/15 px-3 py-1 text-xs shadow-lg">
-                  <Crown className="h-3.5 w-3.5 mr-1.5 text-amber-400" />
-                  Level {gamification.levelInfo.level} • {gamification.levelInfo.title}
-                </Badge>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => {
-                    setProfileRoleView("student");
-                    setActiveTab("banners");
-                  }}
-                  className="h-7 px-2.5 text-xs bg-black/65 hover:bg-black/85 text-white border border-white/15 backdrop-blur-md"
-                >
-                  <ImageIcon className="h-3.5 w-3.5 mr-1" />
-                  Banner
-                </Button>
-              </div>
-            </div>
+            />
 
             <CardContent className="pt-0 px-5 sm:px-7 pb-6">
               <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 -mt-14 relative">
@@ -876,7 +1058,6 @@ export default function Profile() {
                   </div>
                 </div>
 
-                {/* Only show completion bar for Student OR Initiated Creator */}
                 {(!isCreatorSlide || isInitiatedCreator) && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs">
@@ -911,11 +1092,8 @@ export default function Profile() {
           </Card>
         </motion.div>
 
-        {/* SLIDE BODY: Switches smoothly between Student Mode and Creator Mode */}
+        {/* SLIDE BODY */}
         <AnimatePresence mode="wait">
-          {/* ===================================================================== */}
-          {/* VIEW A: CREATOR MODE SLIDE FOR UN-INITIATED STUDENTS (MARKETING HOOK) */}
-          {/* ===================================================================== */}
           {isCreatorSlide && !isInitiatedCreator ? (
             <motion.div
               key="creator-marketing-pitch"
@@ -1043,9 +1221,6 @@ export default function Profile() {
               </Card>
             </motion.div>
           ) : (
-            /* ===================================================================== */
-            /* VIEW B: ACTIVE STUDENT PROFILE OR INITIATED CREATOR STUDIO HUB        */
-            /* ===================================================================== */
             <motion.div
               key={isCreatorSlide ? "creator-hub" : "student-hub"}
               initial={{ opacity: 0, x: isCreatorSlide ? 20 : -20 }}
@@ -1059,7 +1234,7 @@ export default function Profile() {
                 {[
                   {
                     id: "showcase",
-                    label: isCreatorSlide ? "Creator Showcase & Proofs" : "Student Activity",
+                    label: isCreatorSlide ? "Creator Studio & Payouts" : "Student Activity",
                     icon: TrendingUp,
                   },
                   {
@@ -1112,7 +1287,7 @@ export default function Profile() {
               </div>
 
               <AnimatePresence mode="wait">
-                {/* TAB 1: SHOWCASE (Role-Specific!) */}
+                {/* TAB 1: SHOWCASE */}
                 {activeTab === "showcase" && (
                   <motion.div
                     key="showcase"
@@ -1124,7 +1299,268 @@ export default function Profile() {
                   >
                     {isCreatorSlide ? (
                       <>
-                        {/* CREATOR PROOF VAULT (Shown ONLY in Creator Mode!) */}
+                        {/* 1-CLICK CAMPUS SHOWCASE SHARE BANNER */}
+                        <Card className="border-teal-500/35 bg-gradient-to-r from-teal-500/10 via-purple-500/10 to-card">
+                          <CardContent className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="space-y-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <Share2 className="h-4 w-4 text-teal-400 shrink-0" />
+                                <h3 className="text-sm sm:text-base font-bold">
+                                  Share Your Verified Creator Showcase
+                                </h3>
+                              </div>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {showcaseShareUrl}
+                              </p>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              <Button
+                                type="button"
+                                size="sm"
+                                onClick={handleCopyShowcaseLink}
+                                className="bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs"
+                              >
+                                {copiedShowcase ? (
+                                  <>
+                                    <Check className="h-3.5 w-3.5 mr-1.5" />
+                                    Link Copied!
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="h-3.5 w-3.5 mr-1.5" />
+                                    Copy Showcase Link
+                                  </>
+                                )}
+                              </Button>
+
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => navigate("/app/upload-notes")}
+                                className="text-xs border-purple-500/40 text-purple-300 hover:bg-purple-500/10"
+                              >
+                                + Upload Note
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        {/* CREATOR WALLET & BKASH / NAGAD PAYOUT REQUESTS */}
+                        <Card className="bg-card/95 border-emerald-500/30">
+                          <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div>
+                              <CardTitle className="text-base flex items-center gap-2">
+                                <Banknote className="h-4 w-4 text-emerald-400" />
+                                Creator Wallet &amp; bKash / Nagad Withdrawals
+                              </CardTitle>
+                              <CardDescription className="text-xs">
+                                Withdraw your 80% note royalties directly to bKash, Nagad, or Rocket (min ৳50)
+                              </CardDescription>
+                            </div>
+
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => {
+                                setPayoutAmountInput(
+                                  availableWithdrawBalance > 0
+                                    ? String(availableWithdrawBalance)
+                                    : ""
+                                );
+                                setShowPayoutForm((prev) => !prev);
+                              }}
+                              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs self-start sm:self-auto"
+                            >
+                              <Wallet className="h-3.5 w-3.5 mr-1.5" />
+                              {showPayoutForm ? "Close Payout Form" : "Request Payout"}
+                            </Button>
+                          </CardHeader>
+
+                          <CardContent className="space-y-4">
+                            {/* 3 Balance Summary Pills */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                              <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25">
+                                <p className="text-[11px] uppercase tracking-wider text-emerald-300/80 font-semibold">
+                                  Available to Withdraw
+                                </p>
+                                <p className="text-2xl font-extrabold text-emerald-400 mt-1">
+                                  {loadingStats
+                                    ? "..."
+                                    : `৳${availableWithdrawBalance.toLocaleString()}`}
+                                </p>
+                              </div>
+
+                              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25">
+                                <p className="text-[11px] uppercase tracking-wider text-amber-300/80 font-semibold">
+                                  Pending Admin Transfer
+                                </p>
+                                <p className="text-2xl font-extrabold text-amber-400 mt-1">
+                                  {loadingStats
+                                    ? "..."
+                                    : `৳${pendingPayoutAmount.toLocaleString()}`}
+                                </p>
+                              </div>
+
+                              <div className="p-3.5 rounded-xl bg-muted/40 border border-border/60">
+                                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
+                                  Total Paid Out
+                                </p>
+                                <p className="text-2xl font-extrabold text-foreground mt-1">
+                                  {loadingStats
+                                    ? "..."
+                                    : `৳${paidPayoutAmount.toLocaleString()}`}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Inline Withdrawal Request Form */}
+                            {showPayoutForm && (
+                              <form
+                                onSubmit={handleRequestPayout}
+                                className="p-4 rounded-2xl bg-muted/35 border border-emerald-500/30 space-y-4"
+                              >
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                  <div className="space-y-1.5">
+                                    <Label className="text-xs">Provider</Label>
+                                    <div className="grid grid-cols-3 gap-1.5">
+                                      {(["bkash", "nagad", "rocket"] as const).map(
+                                        (method) => (
+                                          <button
+                                            key={method}
+                                            type="button"
+                                            onClick={() => setPayoutMethod(method)}
+                                            className={`py-2 rounded-lg text-xs font-bold uppercase border transition-colors ${
+                                              payoutMethod === method
+                                                ? "bg-emerald-500 text-slate-950 border-emerald-400"
+                                                : "bg-background border-border text-muted-foreground hover:text-foreground"
+                                            }`}
+                                          >
+                                            {method}
+                                          </button>
+                                        )
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className="space-y-1.5">
+                                    <Label htmlFor="payoutAcc" className="text-xs">
+                                      {payoutMethod.toUpperCase()} Number
+                                    </Label>
+                                    <Input
+                                      id="payoutAcc"
+                                      placeholder="01XXXXXXXXX"
+                                      value={payoutAccountInput}
+                                      onChange={(e) =>
+                                        setPayoutAccountInput(e.target.value)
+                                      }
+                                      required
+                                    />
+                                  </div>
+
+                                  <div className="space-y-1.5">
+                                    <Label htmlFor="payoutAmt" className="text-xs">
+                                      Amount (Max ৳{availableWithdrawBalance})
+                                    </Label>
+                                    <Input
+                                      id="payoutAmt"
+                                      type="number"
+                                      min={50}
+                                      max={Math.max(50, availableWithdrawBalance)}
+                                      placeholder="e.g. 200"
+                                      value={payoutAmountInput}
+                                      onChange={(e) =>
+                                        setPayoutAmountInput(e.target.value)
+                                      }
+                                      required
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center justify-end gap-2">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setShowPayoutForm(false)}
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    type="submit"
+                                    size="sm"
+                                    disabled={
+                                      submittingPayout || availableWithdrawBalance < 50
+                                    }
+                                    className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold"
+                                  >
+                                    {submittingPayout ? (
+                                      <>
+                                        <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                                        Submitting...
+                                      </>
+                                    ) : (
+                                      "Submit Payout Request"
+                                    )}
+                                  </Button>
+                                </div>
+                              </form>
+                            )}
+
+                            {/* Recent Payout History */}
+                            {payoutRequests.length > 0 && (
+                              <div className="space-y-2 pt-1">
+                                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
+                                  Recent Payout Requests
+                                </p>
+                                <div className="space-y-2">
+                                  {payoutRequests.slice(0, 5).map((req) => (
+                                    <div
+                                      key={req.id}
+                                      className="flex items-center justify-between p-2.5 rounded-xl bg-muted/30 border border-border/50 text-xs"
+                                    >
+                                      <div className="flex items-center gap-2.5">
+                                        <Badge
+                                          variant="outline"
+                                          className="uppercase text-[10px]"
+                                        >
+                                          {req.payment_method}
+                                        </Badge>
+                                        <span className="font-mono font-semibold">
+                                          {req.account_number}
+                                        </span>
+                                        <span className="text-muted-foreground">
+                                          •{" "}
+                                          {new Date(req.created_at).toLocaleDateString()}
+                                        </span>
+                                      </div>
+
+                                      <div className="flex items-center gap-2.5">
+                                        <span className="font-bold text-foreground">
+                                          ৳{req.amount}
+                                        </span>
+                                        {req.status === "approved" ? (
+                                          <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 text-[10px]">
+                                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                                            Paid
+                                          </Badge>
+                                        ) : (
+                                          <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/30 text-[10px]">
+                                            <Clock className="h-3 w-3 mr-1" />
+                                            Pending
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+
+                        {/* CREATOR PROOF VAULT */}
                         <Card className="bg-card/95 border-purple-500/25">
                           <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                             <div>
@@ -1253,7 +1689,7 @@ export default function Profile() {
                               <p className="text-2xl font-bold mt-1 text-emerald-400">
                                 {loadingStats
                                   ? "..."
-                                  : `৳${gamification.totalCreatorEarnings.toLocaleString()}`}
+                                  : `৳${lifetimeNetEarnings.toLocaleString()}`}
                               </p>
                               <p className="text-[11px] text-muted-foreground mt-0.5">
                                 {gamification.totalSalesCount} approved sales
@@ -1318,7 +1754,7 @@ export default function Profile() {
                                 gamification.highestEarningNotes.map((note, idx) => (
                                   <div
                                     key={note.id}
-                                    onClick={() => navigate(`/app/materials/${note.id}`)}
+                                    onClick={() => navigate(`/app/material/${note.id}`)}
                                     className="flex items-center justify-between gap-3 p-3 rounded-xl bg-muted/35 hover:bg-muted/60 border border-border/50 cursor-pointer transition-colors"
                                   >
                                     <div className="flex items-center gap-3 min-w-0">
@@ -1368,7 +1804,7 @@ export default function Profile() {
                                     <div
                                       key={item.id}
                                       onClick={() =>
-                                        navigate(`/app/materials/${item.materialId}`)
+                                        navigate(`/app/material/${item.materialId}`)
                                       }
                                       className="flex items-center justify-between gap-3 p-3 rounded-xl bg-muted/35 hover:bg-muted/60 border border-border/50 cursor-pointer transition-colors"
                                     >
@@ -1391,7 +1827,7 @@ export default function Profile() {
                         </div>
                       </>
                     ) : (
-                      /* PURE STUDENT VIEW (Clean, zero ID/merit clutter!) */
+                      /* PURE STUDENT VIEW */
                       <>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                           <Card className="bg-card border-border">
@@ -1443,7 +1879,6 @@ export default function Profile() {
                           </Card>
                         </div>
 
-                        {/* Recent Unlocked Notes */}
                         <Card className="bg-card border-border">
                           <CardHeader className="pb-3 flex flex-row items-center justify-between">
                             <div>
@@ -1485,7 +1920,7 @@ export default function Profile() {
                                   <div
                                     key={item.id}
                                     onClick={() =>
-                                      navigate(`/app/materials/${item.materialId}`)
+                                      navigate(`/app/material/${item.materialId}`)
                                     }
                                     className="flex items-center justify-between gap-3 p-3 rounded-xl bg-muted/35 hover:bg-muted/60 border border-border/50 cursor-pointer transition-colors"
                                   >
@@ -1642,33 +2077,53 @@ export default function Profile() {
                             </Badge>
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            Upload any custom JPG, PNG, or WEBP artwork (max 5MB) as your profile cover banner.
+                            Upload any custom JPG, PNG, or WEBP artwork (max 5MB), then drag and zoom right on your cover banner to frame it like Facebook.
                           </p>
                         </div>
 
                         {gamification.levelInfo.canUploadCustomBanner ? (
-                          <label className="cursor-pointer shrink-0">
-                            <input
-                              type="file"
-                              accept="image/jpeg,image/png,image/webp"
-                              className="hidden"
-                              disabled={uploadingBanner}
-                              onChange={handleCustomBannerUpload}
-                            />
-                            <span className="inline-flex items-center justify-center rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold px-4 py-2.5 transition-colors">
-                              {uploadingBanner ? (
-                                <>
-                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                  Uploading...
-                                </>
-                              ) : (
-                                <>
-                                  <Upload className="h-4 w-4 mr-2" />
-                                  Upload Custom Banner
-                                </>
-                              )}
-                            </span>
-                          </label>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {customBannerUrl && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  window.scrollTo({ top: 0, behavior: "smooth" });
+                                  setRepositionTrigger((n) => n + 1);
+                                }}
+                                className="text-xs"
+                              >
+                                Reposition Current
+                              </Button>
+                            )}
+                            <label className="cursor-pointer">
+                              <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                className="hidden"
+                                disabled={uploadingBanner}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleBannerFileSelected(file);
+                                  e.target.value = "";
+                                }}
+                              />
+                              <span className="inline-flex items-center justify-center rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold px-4 py-2.5 transition-colors">
+                                {uploadingBanner ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Uploading...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    Upload Custom Banner
+                                  </>
+                                )}
+                              </span>
+                            </label>
+                          </div>
                         ) : (
                           <Button disabled variant="outline" size="sm" className="shrink-0">
                             <Lock className="h-3.5 w-3.5 mr-1.5" />
@@ -1728,7 +2183,7 @@ export default function Profile() {
                   </motion.div>
                 )}
 
-                {/* TAB 4: EDIT PROFILE (Clean Student Form vs. Full Creator Proof & Payout Form) */}
+                {/* TAB 4: EDIT PROFILE */}
                 {activeTab === "details" && (
                   <motion.div
                     key="details"
@@ -1738,7 +2193,6 @@ export default function Profile() {
                     transition={{ duration: 0.2 }}
                     className="space-y-5"
                   >
-                    {/* Upload Box: Student sees ONLY Avatar Photo; Creator sees Avatar + ID Card + Merit Proof */}
                     <Card className="bg-card border-border">
                       <CardHeader className="pb-3">
                         <CardTitle className="text-base">
@@ -1841,7 +2295,6 @@ export default function Profile() {
                       </CardContent>
                     </Card>
 
-                    {/* Role-Specific Details Form */}
                     <Card className="bg-card border-border">
                       <CardHeader>
                         <CardTitle className="text-base">
@@ -1984,7 +2437,6 @@ export default function Profile() {
                               </div>
                             </>
                           ) : (
-                            /* PURE STUDENT FORM (No ID Card, CGPA, or Merit Proof!) */
                             <>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-2">
