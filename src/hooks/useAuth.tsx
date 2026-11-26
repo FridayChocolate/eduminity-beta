@@ -4,16 +4,13 @@ import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { isAdminEmail, isContributorOnboardingComplete } from "@/lib/gamification";
 import { ContributorOnboardingModal } from "@/components/ContributorOnboardingModal";
+import { ROUTES } from "@/lib/routes";
 
 export type UserRole = "student" | "contributor" | "both" | null;
 export type ActiveMode = "student" | "contributor";
 
 const ACTIVE_MODE_KEY = "eduminity-active-mode";
 const LEGACY_MODE_KEY = "eduminity-mode";
-
-const STUDENT_HOME = "/app/student-dashboard";
-const CONTRIBUTOR_HOME = "/app/creator-studio";
-const FIRST_STEP_AFTER_INITIATION = "/app/creator-studio";
 
 let cachedSession: Session | null = null;
 let cachedUser: User | null = null;
@@ -29,7 +26,8 @@ const modeListeners = new Set<() => void>();
 
 const readStoredActiveMode = (): ActiveMode => {
   if (typeof window === "undefined") return "student";
-  const stored = localStorage.getItem(ACTIVE_MODE_KEY) || localStorage.getItem(LEGACY_MODE_KEY);
+  const stored =
+    localStorage.getItem(ACTIVE_MODE_KEY) || localStorage.getItem(LEGACY_MODE_KEY);
   return stored === "contributor" ? "contributor" : "student";
 };
 
@@ -55,7 +53,7 @@ export const registerAuthNavigator = (fn: NavigateFn | null) => {
   navigateImpl = fn;
 };
 
-/** Mount inside the router so toggleMode and ContributorOnboardingModal work globally. */
+/** Mount inside the router so ContributorOnboardingModal works globally without hard reloads. */
 export const AuthNavigatorBridge = () => {
   const navigate = useNavigate();
   const [modalOpen, setModalOpen] = useState(onboardingModalOpen);
@@ -84,11 +82,8 @@ export const AuthNavigatorBridge = () => {
     onboardingModalOpen = false;
     persistActiveMode("contributor");
 
-    // Move directly to what needs to be done next: uploading their first note
     if (navigateImpl) {
-      navigateImpl(FIRST_STEP_AFTER_INITIATION);
-    } else {
-      window.location.assign(FIRST_STEP_AFTER_INITIATION);
+      navigateImpl(ROUTES.PROFILE);
     }
   };
 
@@ -153,15 +148,21 @@ export const useAuth = () => {
       if (metaRole === "both") return "both";
       if (metaRole === "contributor" || metaRole === "creator") return "contributor";
 
-      return "student";
+      return cachedRole || "student";
     } catch {
-      return "student";
+      return cachedRole || "student";
     }
   };
 
-  const fetchIsContributor = async (currentUser: User, role: UserRole): Promise<boolean> => {
+  const fetchIsContributor = async (
+    currentUser: User,
+    role: UserRole
+  ): Promise<boolean> => {
     if (isAdminEmail(currentUser.email)) return true;
     if (role === "contributor" || role === "both") return true;
+    if (isContributorOnboardingComplete(currentUser.user_metadata, currentUser.email)) {
+      return true;
+    }
 
     try {
       const { data, error } = await (supabase as any)
@@ -172,10 +173,10 @@ export const useAuth = () => {
 
       if (!error && data) return true;
     } catch {
-      // Role fallback already applied above
+      // Keep cached status if transient network error occurs
     }
 
-    return false;
+    return cachedIsContributor;
   };
 
   const refreshUser = useCallback(async () => {
@@ -193,20 +194,29 @@ export const useAuth = () => {
   useEffect(() => {
     let mounted = true;
 
-    const syncSession = async (nextSession: Session | null) => {
+    const syncSession = async (
+      nextSession: Session | null,
+      isBackgroundRefresh = false
+    ) => {
+      const prevUserId = cachedUser?.id ?? null;
+      const nextUserId = nextSession?.user?.id ?? null;
+
       cachedSession = nextSession;
       cachedUser = nextSession?.user ?? null;
 
       if (nextSession?.user) {
-        const role = await fetchUserRole(nextSession.user);
-        const contributor = await fetchIsContributor(nextSession.user, role);
-        cachedRole = role;
-        cachedIsContributor = contributor;
+        // Only re-query roles if user changed or roles haven't been loaded yet
+        if (!isBackgroundRefresh || prevUserId !== nextUserId || cachedRole === null) {
+          const role = await fetchUserRole(nextSession.user);
+          const contributor = await fetchIsContributor(nextSession.user, role);
+          cachedRole = role;
+          cachedIsContributor = contributor;
 
-        if (cachedActiveMode === "contributor" && !contributor) {
-          cachedActiveMode = "student";
-          localStorage.setItem(ACTIVE_MODE_KEY, "student");
-          localStorage.setItem(LEGACY_MODE_KEY, "student");
+          if (cachedActiveMode === "contributor" && !contributor) {
+            cachedActiveMode = "student";
+            localStorage.setItem(ACTIVE_MODE_KEY, "student");
+            localStorage.setItem(LEGACY_MODE_KEY, "student");
+          }
         }
       } else {
         cachedRole = null;
@@ -227,13 +237,20 @@ export const useAuth = () => {
     };
 
     supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
-      syncSession(initialSession);
+      syncSession(initialSession, false);
     });
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      syncSession(nextSession);
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      // Ignore silent tab-focus token refreshes so pages never jump or flicker
+      if (event === "TOKEN_REFRESHED") {
+        cachedSession = nextSession;
+        if (nextSession?.user) cachedUser = nextSession.user;
+        emitAuthCache();
+        return;
+      }
+      syncSession(nextSession, event === "USER_UPDATED");
     });
 
     return () => {
@@ -249,7 +266,11 @@ export const useAuth = () => {
       // Ignore missing session errors
     } finally {
       Object.keys(localStorage).forEach((key) => {
-        if (key.startsWith("sb-") || key === ACTIVE_MODE_KEY || key === LEGACY_MODE_KEY) {
+        if (
+          key.startsWith("sb-") ||
+          key === ACTIVE_MODE_KEY ||
+          key === LEGACY_MODE_KEY
+        ) {
           localStorage.removeItem(key);
         }
       });
@@ -271,7 +292,11 @@ export const useAuth = () => {
       setActiveModeState("student");
       emitAuthCache();
 
-      window.location.replace("/");
+      if (navigateImpl) {
+        navigateImpl(ROUTES.LANDING);
+      } else {
+        window.location.replace(ROUTES.LANDING);
+      }
     }
   };
 
@@ -289,8 +314,10 @@ export const useAuth = () => {
     persistActiveMode(mode);
   }, []);
 
+  // Toggle mode in-place WITHOUT forcibly redirecting the user off their current page
   const toggleMode = useCallback(() => {
-    const next: ActiveMode = cachedActiveMode === "contributor" ? "student" : "contributor";
+    const next: ActiveMode =
+      cachedActiveMode === "contributor" ? "student" : "contributor";
     if (next === "contributor") {
       if (
         !cachedIsContributor ||
@@ -301,17 +328,9 @@ export const useAuth = () => {
       }
     }
     persistActiveMode(next);
-    const path = next === "contributor" ? CONTRIBUTOR_HOME : STUDENT_HOME;
-    if (navigateImpl) {
-      navigateImpl(path);
-    } else {
-      window.location.assign(path);
-    }
   }, []);
 
-  const canAccessStudent =
-    Boolean(user) &&
-    (activeMode === "student" || userRole === "student" || userRole === "both" || userRole === null);
+  const canAccessStudent = Boolean(user);
   const canAccessCreator = isContributor;
   const canSwitchModes = isContributor;
   const hasCompletedCreatorProfile = isContributorOnboardingComplete(

@@ -3,14 +3,14 @@ import { HeroSection } from "@/components/HeroSection";
 import { SocialProofStrip } from "@/components/SocialProofStrip";
 import { TrendingSection } from "@/components/TrendingSection";
 import { MaterialCard } from "@/components/MaterialCard";
-import { CommunitySection } from "@/components/CommunitySection";
 import { Footer } from "@/components/Footer";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, HelpCircle, Users, Sparkles } from "lucide-react";
+import { BookOpen, Upload, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ScrollReveal } from "@/hooks/useScrollReveal";
 import { AppLayout } from "@/layouts/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
+import { ROUTES } from "@/lib/routes";
 
 interface LiveMaterial {
   id: string;
@@ -55,31 +55,23 @@ const AppHome = () => {
       description: "Browse verified lecture notes, guides & past papers",
       iconClass: "text-teal-400",
       borderClass: "hover:border-teal-500/50",
-      route: "/app/materials",
+      route: ROUTES.MATERIALS,
     },
     {
-      icon: HelpCircle,
-      title: "Q&A Help",
-      description: "Ask academic questions and get peer answers",
+      icon: Upload,
+      title: "Upload & Earn 80%",
+      description: "Publish your semester notes and earn directly to bKash/Nagad",
       iconClass: "text-indigo-400",
       borderClass: "hover:border-indigo-500/50",
-      route: "/app/questions",
-    },
-    {
-      icon: Users,
-      title: "Community",
-      description: "Join study discussions with students across Bangladesh",
-      iconClass: "text-cyan-400",
-      borderClass: "hover:border-cyan-500/50",
-      route: "/app/community",
+      route: ROUTES.UPLOAD_NOTES,
     },
     {
       icon: Sparkles,
-      title: "Creator Studio",
-      description: "Upload your notes and earn 80% on every sale",
+      title: "Profile & Creator Studio",
+      description: "Manage your Proof Vault, XP badges, cover banner & payouts",
       iconClass: "text-purple-400",
       borderClass: "hover:border-purple-500/50",
-      route: "/app/profile",
+      route: ROUTES.PROFILE,
     },
   ];
 
@@ -97,20 +89,20 @@ const AppHome = () => {
         <TrendingSection />
       </ScrollReveal>
 
-      {/* Core Working Feature Cards */}
+      {/* 3 Core Working Pillars */}
       <ScrollReveal delay={200}>
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           {featureCards.map((card, index) => (
             <Card
               key={index}
               className={`cursor-pointer hover:shadow-lg transition-all duration-300 border-border/50 ${card.borderClass} hover:-translate-y-1 group`}
               onClick={() => navigate(card.route)}
             >
-              <CardHeader className="p-3.5 md:p-5">
+              <CardHeader className="p-5">
                 <card.icon
-                  className={`h-6 w-6 md:h-7 md:w-7 ${card.iconClass} mb-1.5 transition-transform duration-300 group-hover:scale-110`}
+                  className={`h-7 w-7 ${card.iconClass} mb-2 transition-transform duration-300 group-hover:scale-110`}
                 />
-                <CardTitle className="text-sm md:text-base">{card.title}</CardTitle>
+                <CardTitle className="text-base">{card.title}</CardTitle>
                 <CardDescription className="text-xs">{card.description}</CardDescription>
               </CardHeader>
             </Card>
@@ -120,13 +112,14 @@ const AppHome = () => {
 
       {/* Live Study Materials from Database */}
       <ScrollReveal>
-        <section id="sheets" className="mb-6 md:mb-8">
-          <div className="flex items-center justify-between mb-4 md:mb-6">
+        <section id="sheets" className="mb-8">
+          <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl md:text-2xl font-bold dark:text-neon-teal">
               Latest Study Materials
             </h2>
             <button
-              onClick={() => navigate("/app/materials")}
+              type="button"
+              onClick={() => navigate(ROUTES.MATERIALS)}
               className="text-xs sm:text-sm font-semibold text-primary hover:underline"
             >
               View All →
@@ -144,7 +137,7 @@ const AppHome = () => {
               {liveMaterials.map((item) => (
                 <div
                   key={item.id}
-                  onClick={() => navigate(`/app/materials/${item.id}`)}
+                  onClick={() => navigate(ROUTES.materialDetail(item.id))}
                   className="cursor-pointer"
                 >
                   <MaterialCard
@@ -160,10 +153,6 @@ const AppHome = () => {
             </div>
           )}
         </section>
-      </ScrollReveal>
-
-      <ScrollReveal>
-        <CommunitySection />
       </ScrollReveal>
 
       <Footer />

@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { ROUTES } from "@/lib/routes";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -20,26 +21,19 @@ export const ProtectedRoute = ({
   children,
   allowedPortal = "any",
 }: ProtectedRouteProps) => {
-  const { user, loading, userRole, activeMode, canAccessCreator } = useAuth();
+  const { user, loading, canAccessCreator } = useAuth();
 
-  if (loading || (user && userRole === null)) {
+  if (loading) {
     return <ProtectedRouteLoader />;
   }
 
   if (!user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={ROUTES.AUTH} replace />;
   }
 
+  // Only restrict contributor-only routes if user hasn't unlocked Creator access yet
   if (allowedPortal === "contributor" && !canAccessCreator) {
-    return <Navigate to="/app/student-dashboard" replace />;
-  }
-
-  // Contributors keep full student access whenever they are in student mode.
-  const canUseStudentPortal =
-    activeMode === "student" || userRole === "student" || userRole === "both";
-
-  if (allowedPortal === "student" && !canUseStudentPortal) {
-    return <Navigate to="/app/creator-studio" replace />;
+    return <Navigate to={ROUTES.PROFILE} replace />;
   }
 
   return <>{children}</>;

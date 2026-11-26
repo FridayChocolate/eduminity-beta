@@ -1,12 +1,12 @@
 import {
   User,
-  Wallet,
   Menu,
-  LayoutDashboard,
   Sparkles,
   LogOut,
   ShieldCheck,
   ArrowLeftRight,
+  ExternalLink,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
@@ -17,19 +17,22 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ModeToggle } from "@/components/ModeToggle";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useMode } from "@/contexts/ModeContext";
 import { cn } from "@/lib/utils";
 import { SearchDialog } from "@/components/SearchDialog";
-
-const ADMIN_EMAILS = [
-  "business.neurovane@gmail.com",
-  "shariarlabib04@gmail.com",
-  "tanvirshafi9510@gmail.com",
-];
+import { isAdminEmail } from "@/lib/gamification";
+import { ROUTES } from "@/lib/routes";
 
 export const Header = () => {
-  const { user, canAccessCreator, canSwitchModes, isContributor, activeMode, toggleMode, signOut } = useAuth();
+  const {
+    user,
+    canAccessCreator,
+    canSwitchModes,
+    isContributor,
+    activeMode,
+    toggleMode,
+    signOut,
+  } = useAuth();
   const { mode, setMode } = useMode();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -38,13 +41,14 @@ export const Header = () => {
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   const isCreatorMode = mode === "contributor" && canAccessCreator;
-  const isAdmin = Boolean(
-    user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
-  );
+  const isAdmin = isAdminEmail(user?.email);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+      if (
+        profileMenuRef.current &&
+        !profileMenuRef.current.contains(e.target as Node)
+      ) {
         setProfileMenuOpen(false);
       }
     };
@@ -82,7 +86,7 @@ export const Header = () => {
       <div className="container flex h-14 sm:h-16 items-center justify-between gap-2 px-3 sm:px-4 max-w-full">
         <div className="flex items-center gap-3 md:gap-8 min-w-0">
           <Link
-            to="/"
+            to={user ? ROUTES.APP : ROUTES.LANDING}
             aria-label="Eduminity home"
             className="flex items-center gap-1.5 sm:gap-2 shrink-0 transition-opacity hover:opacity-90"
           >
@@ -100,110 +104,69 @@ export const Header = () => {
             </span>
           </Link>
 
-          {/* Portal-Aware Desktop Navigation */}
-          <nav className="hidden lg:flex gap-6">
-            {isCreatorMode ? (
-              <>
-                <button
-                  onClick={() => navigateTo("/app/creator-studio")}
-                  className="text-sm font-medium text-foreground hover:text-creator-primary transition-colors"
-                >
-                  Creator Home
-                </button>
-                <button
-                  onClick={() => navigateTo("/app/my-uploads")}
-                  className="text-sm font-medium text-foreground hover:text-creator-primary transition-colors"
-                >
-                  My Uploads
-                </button>
-                <button
-                  onClick={() => navigateTo("/app/upload-notes")}
-                  className="text-sm font-medium text-foreground hover:text-creator-primary transition-colors"
-                >
-                  Upload Notes
-                </button>
-                <button
-                  onClick={() => navigateTo("/app/creator-earnings")}
-                  className="text-sm font-medium text-foreground hover:text-creator-primary transition-colors"
-                >
-                  Earnings
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={() => navigateTo("/")}
-                  className="text-sm font-medium text-foreground hover:text-primary transition-colors"
-                >
-                  Home
-                </button>
-                {user && (
-                  <button
-                    onClick={() => navigateTo("/app/student-dashboard", "student")}
-                    className="text-sm font-medium text-foreground hover:text-primary transition-colors"
-                  >
-                    Dashboard
-                  </button>
-                )}
-                <button
-                  onClick={() => navigateTo("/app/materials")}
-                  className="text-sm font-medium text-foreground hover:text-primary transition-colors"
-                >
-                  Study Hub
-                </button>
-              </>
+          {/* Clean Core Navigation */}
+          <nav className="hidden lg:flex items-center gap-6">
+            <button
+              type="button"
+              onClick={() => navigateTo(user ? ROUTES.APP : ROUTES.LANDING)}
+              className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+            >
+              Home
+            </button>
+            <button
+              type="button"
+              onClick={() => navigateTo(ROUTES.MATERIALS)}
+              className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+            >
+              Study Hub
+            </button>
+            {user && (
+              <button
+                type="button"
+                onClick={() => navigateTo(ROUTES.UPDATES)}
+                className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+              >
+                Updates
+              </button>
+            )}
+            {canAccessCreator && (
+              <button
+                type="button"
+                onClick={() => navigateTo(ROUTES.UPLOAD_NOTES, "contributor")}
+                className="text-sm font-semibold text-teal-400 hover:text-teal-300 transition-colors"
+              >
+                + Upload Notes
+              </button>
             )}
           </nav>
         </div>
 
-        <div className="flex items-center gap-0.5 sm:gap-1.5 md:gap-2 shrink-0">
-          {/* Search Button */}
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           <SearchDialog />
 
-          {/* Mode Toggle for dual-role users */}
           {canSwitchModes && (
             <div className="hidden md:block">
               <ModeToggle />
             </div>
           )}
 
-          {/* Theme Toggle */}
           <div className="hidden sm:block">
             <ThemeToggle />
           </div>
 
           {user ? (
             <>
-              {/* Notification Bell */}
               <NotificationBell />
 
-              {/* Creator Earnings shortcut */}
-              {canAccessCreator && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => navigateTo("/app/creator-earnings", "contributor")}
-                      className="hidden md:inline-flex hover:bg-muted dark:hover:shadow-glow-teal transition-all"
-                    >
-                      <Wallet className="h-4 w-4 md:h-5 md:w-5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Creator Earnings</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-
-              {/* Account Dropdown Menu */}
+              {/* Streamlined Account Menu */}
               <div ref={profileMenuRef} className="relative">
                 <Button
+                  type="button"
                   variant="ghost"
                   size="icon"
                   onClick={() => setProfileMenuOpen((prev) => !prev)}
                   aria-label="Account menu"
-                  className="h-9 w-9 sm:h-10 sm:w-10 hover:bg-muted dark:hover:shadow-glow-teal transition-all"
+                  className="h-9 w-9 sm:h-10 sm:w-10 hover:bg-muted transition-all"
                 >
                   <User className="h-4 w-4 md:h-5 md:w-5" />
                 </Button>
@@ -219,8 +182,40 @@ export const Header = () => {
                       </p>
                     </div>
 
+                    <button
+                      type="button"
+                      onClick={() => navigateTo(ROUTES.PROFILE)}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-white/10 text-left transition-colors"
+                    >
+                      <Sparkles className="h-4 w-4 text-purple-400" />
+                      Profile &amp; Creator Studio
+                    </button>
+
+                    {canAccessCreator && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => navigateTo(ROUTES.UPLOAD_NOTES, "contributor")}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-white/10 text-left transition-colors"
+                        >
+                          <Upload className="h-4 w-4 text-teal-400" />
+                          Upload Study Notes
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => navigateTo(ROUTES.creatorShowcase(user.id))}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-white/10 text-left transition-colors"
+                        >
+                          <ExternalLink className="h-4 w-4 text-gray-400" />
+                          Public Showcase
+                        </button>
+                      </>
+                    )}
+
                     {isContributor && (
                       <button
+                        type="button"
                         onClick={() => {
                           setProfileMenuOpen(false);
                           toggleMode();
@@ -229,60 +224,26 @@ export const Header = () => {
                       >
                         <ArrowLeftRight className="h-4 w-4 text-teal-400" />
                         {activeMode === "contributor"
-                          ? "Switch to Student View"
-                          : "Switch to Contributor Studio"}
+                          ? "Switch to Learning Mode"
+                          : "Switch to Creator Mode"}
                       </button>
-                    )}
-
-                    <button
-                      onClick={() => navigateTo("/app/profile")}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-white/10 text-left transition-colors"
-                    >
-                      <User className="h-4 w-4 text-gray-400" />
-                      My Profile
-                    </button>
-
-                    <button
-                      onClick={() => navigateTo("/app/student-dashboard", "student")}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-white/10 text-left transition-colors"
-                    >
-                      <LayoutDashboard className="h-4 w-4 text-teal-400" />
-                      Student Dashboard
-                    </button>
-
-                    {canAccessCreator && (
-                      <>
-                        <button
-                          onClick={() => navigateTo("/app/creator-studio", "contributor")}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-white/10 text-left transition-colors"
-                        >
-                          <Sparkles className="h-4 w-4 text-purple-400" />
-                          Creator Studio
-                        </button>
-
-                        <button
-                          onClick={() => navigateTo("/app/creator-earnings", "contributor")}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-white/10 text-left transition-colors"
-                        >
-                          <Wallet className="h-4 w-4 text-emerald-400" />
-                          Earnings & Payouts
-                        </button>
-                      </>
                     )}
 
                     {isAdmin && (
                       <button
-                        onClick={() => navigateTo("/admin")}
+                        type="button"
+                        onClick={() => navigateTo(ROUTES.ADMIN)}
                         className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-rose-500/15 text-rose-300 text-left transition-colors"
                       >
                         <ShieldCheck className="h-4 w-4 text-rose-400" />
-                        Admin Panel
+                        Admin Command Center
                       </button>
                     )}
 
                     <div className="my-1 border-t border-white/10" />
 
                     <button
+                      type="button"
                       onClick={handleLogout}
                       className="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-red-500/15 text-red-400 text-left transition-colors"
                     >
@@ -294,12 +255,16 @@ export const Header = () => {
               </div>
             </>
           ) : (
-            <Button onClick={() => navigate("/auth")} size="sm" className="text-xs px-2.5 sm:px-3 md:text-sm">
+            <Button
+              onClick={() => navigate(ROUTES.AUTH)}
+              size="sm"
+              className="text-xs px-3 md:text-sm"
+            >
               Get Started
             </Button>
           )}
 
-          {/* Mobile Menu */}
+          {/* Mobile Drawer */}
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild className="lg:hidden">
               <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10">
@@ -314,95 +279,70 @@ export const Header = () => {
                   </div>
                 )}
 
-                {isCreatorMode ? (
-                  <>
-                    <button
-                      onClick={() => navigateTo("/app/creator-studio")}
-                      className="text-left text-base font-medium p-2 rounded-md hover:bg-muted"
-                    >
-                      Creator Home
-                    </button>
-                    <button
-                      onClick={() => navigateTo("/app/my-uploads")}
-                      className="text-left text-base font-medium p-2 rounded-md hover:bg-muted"
-                    >
-                      My Uploads
-                    </button>
-                    <button
-                      onClick={() => navigateTo("/app/upload-notes")}
-                      className="text-left text-base font-medium p-2 rounded-md hover:bg-muted"
-                    >
-                      Upload Notes
-                    </button>
-                    <button
-                      onClick={() => navigateTo("/app/creator-earnings")}
-                      className="text-left text-base font-medium p-2 rounded-md hover:bg-muted"
-                    >
-                      Earnings & Payouts
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => navigateTo("/")}
-                      className="text-left text-base font-medium p-2 rounded-md hover:bg-muted"
-                    >
-                      Home
-                    </button>
-                    {user && (
-                      <button
-                        onClick={() => navigateTo("/app/student-dashboard", "student")}
-                        className="text-left text-base font-medium p-2 rounded-md hover:bg-muted"
-                      >
-                        Dashboard
-                      </button>
-                    )}
-                    <button
-                      onClick={() => navigateTo("/app/materials")}
-                      className="text-left text-base font-medium p-2 rounded-md hover:bg-muted"
-                    >
-                      Study Hub
-                    </button>
-                  </>
+                <button
+                  type="button"
+                  onClick={() => navigateTo(user ? ROUTES.APP : ROUTES.LANDING)}
+                  className="text-left text-base font-medium p-2 rounded-md hover:bg-muted"
+                >
+                  Home
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigateTo(ROUTES.MATERIALS)}
+                  className="text-left text-base font-medium p-2 rounded-md hover:bg-muted"
+                >
+                  Study Hub
+                </button>
+                {user && (
+                  <button
+                    type="button"
+                    onClick={() => navigateTo(ROUTES.UPDATES)}
+                    className="text-left text-base font-medium p-2 rounded-md hover:bg-muted"
+                  >
+                    Updates &amp; Changelog
+                  </button>
+                )}
+                {canAccessCreator && (
+                  <button
+                    type="button"
+                    onClick={() => navigateTo(ROUTES.UPLOAD_NOTES, "contributor")}
+                    className="text-left text-base font-semibold text-teal-400 p-2 rounded-md hover:bg-muted"
+                  >
+                    + Upload Notes
+                  </button>
                 )}
 
-                {/* Appearance toggle on mobile */}
                 <div className="border-t border-border my-2 pt-3 flex items-center justify-between px-2">
-                  <span className="text-sm font-medium text-muted-foreground">Appearance</span>
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Appearance
+                  </span>
                   <ThemeToggle />
                 </div>
 
                 {user && (
                   <>
                     <div className="border-t border-border my-1" />
-                    {isContributor && (
-                      <button
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          toggleMode();
-                        }}
-                        className="text-left text-base font-medium p-2 rounded-md hover:bg-muted text-primary"
-                      >
-                        {activeMode === "contributor"
-                          ? "Switch to Student View"
-                          : "Switch to Contributor Studio"}
-                      </button>
-                    )}
                     <button
-                      onClick={() => navigateTo("/app/profile")}
+                      type="button"
+                      onClick={() => navigateTo(ROUTES.PROFILE)}
                       className="text-left text-base font-medium p-2 rounded-md hover:bg-muted"
                     >
-                      My Profile
+                      Profile &amp; Creator Studio
                     </button>
                     {isAdmin && (
                       <button
-                        onClick={() => navigateTo("/admin")}
+                        type="button"
+                        onClick={() => navigateTo(ROUTES.ADMIN)}
                         className="text-left text-base font-medium text-rose-400 p-2 rounded-md hover:bg-muted"
                       >
-                        Admin Panel
+                        Admin Command Center
                       </button>
                     )}
-                    <Button variant="outline" onClick={handleLogout} className="justify-start mt-2">
+                    <Button
+                      variant="outline"
+                      onClick={handleLogout}
+                      className="justify-start mt-2"
+                    >
                       Logout
                     </Button>
                   </>
